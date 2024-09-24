@@ -1,0 +1,72 @@
+# starting from the second point, for |t2-t1|>=2 produces every possible fit
+
+source("~/projects/stepscaling/RU1/03_functions/header.R")
+source("~/projects/stepscaling/RU1/03_functions/wloop.R")
+
+ntmax <- T*frac
+nsmax <- L*frac
+
+for(beta in betaseries){
+  betaprecision <- sprintf("%.6f", beta)
+
+  inputfilename <- inputfilename(L, T, beta, frac)
+  datafile <- datafile(L, T, betaprecision)
+
+  datapath <- paste0("/home/negro/projects/stepscaling/RU1/01_rawdata/heatbath/", inputfilename,"/omeas/")
+  plotpath <- paste0("/home/negro/projects/stepscaling/RU1/02_output/plots/", inputfilename, "/")
+  writepath <- paste0("/home/negro/projects/stepscaling/RU1/02_output/data/",inputfilename, "/")
+
+  if (!dir.exists(plotpath)) {
+    dir.create(plotpath, recursive = TRUE)
+    cat("Directory created:", plotpath, "\n")
+  }
+  if (!dir.exists(writepath)) {
+    dir.create(writepath, recursive = TRUE)
+    cat("Directory created:", writepath, "\n")
+  }
+
+  pdf(paste0(plotpath, "/fitmeff.pdf"))
+  for(i in 1:nsmax){
+    write("r,t1,t2,meff,dmeff,chi2,dof,chi2red", file = paste0(writepath, "effectivemassfit_r", i,".csv"))
+
+    Wt <- wlooptocf(datapath, datafile, L, T, frac, i, skiprows = therm_skip)
+    Wt <- bootstrap.cf(Wt, boot.R = bssamples, boot.l = blocksize)
+
+    meffvec <- bootstrap.effectivemass(Wt, type = "log")
+
+    my.bssamplesfit.list <- list()
+
+    num.meffvalues <- sum(!is.na(Wt[[2]]))
+
+    write("", file = paste0(writepath, "effectivemassfit_r", i,".csv"), append = TRUE)
+
+    for (j in 1:(num.meffvalues-2)){
+      for (k in (j+2):(num.meffvalues-1)){
+        if(is.na(meffvec$t0[j+1]) == FALSE && is.na(meffvec$t0[k+1]) == FALSE){
+          # check if the replacing of nans has a significant effect on the fit
+          effmass <- fit.effectivemass(meffvec, t1 = j, t2 = k, useCov = FALSE, replace.na = FALSE)
+
+          t1 <- effmass$effmassfit$t1
+          t2 <- effmass$effmassfit$t2
+          meff <- effmass$effmassfit$t0[[1]]
+          dmeff <- effmass$effmassfit$se
+          chi2 <- effmass$effmassfit$chisqr
+          dof <- effmass$dof
+          chi2red <- chi2/dof
+
+          line = paste(i, t1, t2, meff, dmeff, chi2red, sep = ",")
+          write(line, file = paste0(writepath, "effectivemassfit_r", i, ".csv"), append = TRUE)
+
+          my.bssamplesfit.list[[length(my.bssamplesfit.list)+1]] <- effmass$effmassfit$t[, 1]
+
+          plot(effmass,
+                xlab = "t",
+                ylab = "m_eff",
+                main = TeX(sprintf(paste0(r"(const fit to $m_eff$(t))", r"(, r=)", j, r"(), L=)", L, r"(, T=)", T, r"(, $\beta$=)", beta))))
+        }
+      }
+    }
+    saveRDS(my.bssamplesfit.list, paste0(writepath, "bssamplesfit_r", i, ".rds"))
+  }
+  dev.off()
+}
