@@ -1,5 +1,5 @@
 01_rawdata/*
 02_output/*
 !01_rawdata/.gitkeep
-!02_rawdata/.gitkeep
+!02_output/.gitkeep
 .Rproj.user
