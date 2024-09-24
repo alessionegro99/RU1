@@ -1,3 +1,3 @@
-01_rawdata
-02_output
+01_rawdata/*
+02_output/*
 .Rproj.user
