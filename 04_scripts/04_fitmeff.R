@@ -1,7 +1,7 @@
 # starting from the second point, for |t2-t1|>=2 produces every possible fit
 
 source("~/projects/stepscaling/RU1/03_functions/header.R")
-source("~/projects/stepscaling/RU1/03_functions/wloop.R")
+source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
 
 ntmax <- T*frac
 nsmax <- L*frac
@@ -12,9 +12,9 @@ for(beta in betaseries){
   inputfilename <- inputfilename(L, T, beta, frac)
   datafile <- datafile(L, T, betaprecision)
 
-  datapath <- paste0("/home/negro/projects/stepscaling/RU1/01_rawdata/heatbath/", inputfilename,"/omeas/")
-  plotpath <- paste0("/home/negro/projects/stepscaling/RU1/02_output/plots/", inputfilename, "/")
-  writepath <- paste0("/home/negro/projects/stepscaling/RU1/02_output/data/",inputfilename, "/")
+  datapath <- datapath(inputfilename)
+  plotpath <- plotpath(inputfilename)
+  writepath <- writepath(inputfilename)
 
   if (!dir.exists(plotpath)) {
     dir.create(plotpath, recursive = TRUE)
@@ -36,11 +36,11 @@ for(beta in betaseries){
 
     my.bssamplesfit.list <- list()
 
-    num.meffvalues <- sum(!is.na(Wt[[2]]))
+    num.meffvalues <- sum(!is.na(meffvec[[2]]))
 
     write("", file = paste0(writepath, "effectivemassfit_r", i,".csv"), append = TRUE)
 
-    for (j in 1:(num.meffvalues-2)){
+    for (j in 1:(num.meffvalues-3)){
       for (k in (j+2):(num.meffvalues-1)){
         if(is.na(meffvec$t0[j+1]) == FALSE && is.na(meffvec$t0[k+1]) == FALSE){
           # check if the replacing of nans has a significant effect on the fit
@@ -61,8 +61,8 @@ for(beta in betaseries){
 
           plot(effmass,
                 xlab = "t",
-                ylab = "m_eff",
-                main = TeX(sprintf(paste0(r"(const fit to $m_eff$(t))", r"(, r=)", j, r"(), L=)", L, r"(, T=)", T, r"(, $\beta$=)", beta))))
+                ylab = TeX(r"($m_eff$)"),
+                main = TeX(sprintf(paste0(r"(const fit to $m_eff$(t))", r"(, r =)", i, r"(, L =)", L, r"(, T =)", T, r"(, $\beta$ =)", beta))))
         }
       }
     }

@@ -1,33 +1,48 @@
 library(hadron)
-library(hadronhelper)
 library(latex2exp)
 
 # simulations parameters
 
-L <- 32
-T <- 16
-frac <- 0.25
-betaseries <- c(1.5)
-
-# filenames
-
-inputfilename <- function(spatialextent, temporalextent, invcoup, sizeWloops, extra){
-  if(missing(extra))
-    extra <- ""
-  paste0("heatbathinput_", spatialextent, "_", temporalextent, "_3_", invcoup,"_nover5_planartrue_size", sizeWloops, extra)
-}
-datafile <- function(spatialextent, temporalextent, invcoup){
-  paste0("result2p1d.u1potential.rotated.Nt", temporalextent, ".Ns", spatialextent, ".b", invcoup, ".xi1.000000.nape0.alpha1.000000finedistance")
-}
+spatialExtent <- 28
+temporalExtent <- 32
+sizeWLoops <- 0.5
+betaArray <- c(1.65)
 
 # values to be used in the subsequent scripts
 
-therm_skip <- 1000
-bssamples <- 1000
-blocksize_analysis <- 2
-blocksize <- 100
+thermSkip <- 1000
+bootSamples <- 1000
+blockSizeAnalysis <- 2
+blockSize <- 100
 
-# fit functions
+# filenames
 
-exponential <- function (par, x, boot.R, ...) par[1]*exp(-par[2]*x)
+inputFileName <- function(spatialExtent, temporalExtent, invCoupling, sizeWLoops, extra)
+{
+  if(missing(extra))
+    extra <- ""
+  paste0("heatbathinput_", spatialExtent, "_", temporalExtent, "_3_", invCoupling,"_nover5_planartrue_size", sizeWLoops, extra)
+}
+
+dataFile <- function(spatialExtent, temporalExtent, invCoupling)
+{
+  paste0("result2p1d.u1potential.rotated.Nt", temporalExtent, ".Ns", spatialExtent, ".b", invCoupling, ".xi1.000000.nape0.alpha1.000000finedistance")
+}
+
+dataPath <- function(x)
+{
+  paste0("/home/negro/projects/stepscaling/RU1/01_rawdata/heatbath/", x,"/omeas/")
+}
+
+plotPath <- function(x)
+{
+  paste0("/home/negro/projects/stepscaling/RU1/02_output/plots/", x, "/")
+}
+
+writePath <- function(x)
+{
+  paste0("/home/negro/projects/stepscaling/RU1/02_output/data/",x, "/")
+}
+
+
 

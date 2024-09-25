@@ -3,3 +3,4 @@
 !01_rawdata/.gitkeep
 !02_output/.gitkeep
 .Rproj.user
+*.Rhistory
