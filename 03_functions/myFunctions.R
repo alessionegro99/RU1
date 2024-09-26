@@ -304,7 +304,6 @@ plotEffectiveMass <- function(spatialExtent
     effectiveMass <- bootstrap.effectivemass(Wt, type = "log")
 
     plot(effectiveMass,
-         ylim = c(0,1),
          xlab = TeX(r"($m_{eff}$)"),
          ylab = TeX(r"(t)"),
          main = TeX(sprintf(paste(r"($m_eff$(t), type = log, r =)"
@@ -320,8 +319,79 @@ plotEffectiveMass <- function(spatialExtent
 }
 
 # plateau extraction based on the Akaike information criterion
-# (https://arxiv.org/abs/2008.01069)
-computeEffectiveMassAIC <- function()
+# ### ADD REFERENCE HERE ###
+computeEffectiveMassAIC <- function(spatialExtent
+                                    , temporalExtent
+                                    , invCoupling
+                                    , sizeWLoops
+                                    , thermSkip
+                                    , tMax
+                                    , rMax)
 {
+  betaPrecision <- sprintf("%.6f", invCoupling)
 
+  inputFileName <- inputFileName(spatialExtent
+                                 , temporalExtent
+                                 , invCoupling
+                                 , sizeWLoops)
+  dataFile <- dataFile(spatialExtent, temporalExtent, betaPrecision)
+
+  dataPath <- dataPath(inputFileName)
+  plotPath <- plotPath(inputFileName)
+  writePath <- writePath(inputFileName)
+
+  if (!dir.exists(plotPath)) {
+    dir.create(plotPath, recursive = TRUE)
+    cat("Directory created:", plotPath, "\n")
+  }
+  if (!dir.exists(writePath)) {
+    dir.create(writePath, recursive = TRUE)
+    cat("Directory created:", writePath, "\n")
+  }
+
+  for(i in 1:rMax)
+  {
+    Wt <- wLoopToCf(dataPath
+                    , dataFile
+                    , spatialExtent
+                    , temporalExtent
+                    , sizeWLoops
+                    , i
+                    , thermSkip)
+    Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
+
+    effectiveMass <- bootstrap.effectivemass(Wt, type = "log")
+
+    # due to noise some NaNs could pop up
+    countFiniteEffMass <- sum(!is.na(effectiveMass[[2]]))
+
+    AIC <- matrix(, nrow = tMax, ncolumn = tMax)
+
+    # performing constant fits for all possible continuous ranges within
+    # t = 1 and t = tMax with a minimum of at least three support points
+    for (j in 0:(numFiniteEffMass-3))
+    {
+      for (k in (j+2):(numFiniteEffMass-1))
+      {
+        # performing the fit only if both points are finite!
+        if(is.na(effectiveMass$t0[j+1]) == FALSE && is.na(effectiveMass$t0[k+1]) == FALSE)
+        {
+          # ### TO DO ### check if the replacing of nans has a significant effect on the fit
+          fitEffectiveMass <- fit.effectivemass(effectiveMass, t1 = j, t2 = k, useCov = FALSE, replace.na = FALSE)
+
+          t1 <- effectiveMass$fitEffectiveMass$t1
+          t2 <- effectiveMass$fitEffectiveMass$t2
+          meff <- effectiveMass$fitEffectiveMass$t0[[1]]
+          dmeff <- effectiveMass$fitEffectiveMass$se
+          chi2 <- effectiveMass$fitEffectiveMass$chisqr
+          dof <- effectiveMass$dof
+          chi2red <- chi2/dof
+
+
+
+        }
+      }
+    }
+  }
 }
+
