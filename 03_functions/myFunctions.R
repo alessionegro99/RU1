@@ -301,9 +301,9 @@ plotEffectiveMass <- function(spatialExtent
                     , thermSkip)
     Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
 
-    effectiveMass <- bootstrap.effectivemass(Wt, type = "log")
+    mEfft <- bootstrap.effectivemass(Wt, type = "log")
 
-    plot(effectiveMass,
+    plot(mEfft,
          xlab = TeX(r"($m_{eff}$)"),
          ylab = TeX(r"(t)"),
          main = TeX(sprintf(paste(r"($m_eff$(t), type = log, r =)"

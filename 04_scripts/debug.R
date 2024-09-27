@@ -4,7 +4,7 @@ source("~/projects/stepscaling/RU1/03_functions/header.R")
 source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
 
 tMax <- 16
-rMax <- 1
+rMax <- 3
 
 invCoupling <- 1.65
 
@@ -29,6 +29,9 @@ if (!dir.exists(writePath)) {
     cat("Directory created:", writePath, "\n")
 }
 
+mEffAIC0 <- c(rep(0, rMax))
+mEffAICBoot <- matrix(0, nrow = bootSamples, ncol = rMax)
+
 for(i in 1:rMax)
 {
   Wt <- wLoopToCf(dataPath
@@ -38,101 +41,63 @@ for(i in 1:rMax)
                     , sizeWLoops
                     , i
                     , thermSkip)
+
   Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
 
-  effectiveMass <- bootstrap.effectivemass(Wt, type = "log")
+  mEfft <- bootstrap.effectivemass(Wt, type = "log")
 
-  # due to noise some NaNs could pop up
-  finiteEffectiveMasses <- sum(!is.na(effectiveMass[[2]]))
+  m0Lst <- list()
+  w0Lst <- list()
+  p0Lst <- list()
+  mBootLst <- list()
+  wBootLst <- list()
+  pBootLst <- list()
 
-  # AIC procedure for the original data
-  wAIC <- list()
-  normZ <- 0
-
-  # performing constant fits for all possible continuous ranges within
-  # t = 1 and t = tMax with a minimum of at least three support points
-  for (j in 0:(finiteEffectiveMasses-3))
+  for (j in 1:(tMax - 1 - 2))
   {
-    for (k in (j+2):(finiteEffectiveMasses-1))
-    {
-      # performing the fit only if both points are finite!
-      if(is.na(effectiveMass$t0[j+1]) == FALSE
-          && is.na(effectiveMass$t0[k+1]) == FALSE)
+    for (k in (j + 2):(tMax - 1))
+    { ##ADD NUMBER OF NANS IN THE BSSAMPLES EQUAL TO ZERO!!!
+      if(is.na(mEfft$effMass[[j]]) == FALSE
+         && is.na(mEfft$effMass[[k]]) == FALSE
+         && is.na(mEfft$deffMass[[j]]) == FALSE
+         && is.na(mEfft$deffMass[[k]]) == FALSE
+         && mEfft$effMass[[j]] > 0
+         && mEfft$effMass[[k]] > 0
+         && abs(mEfft$effMass[[j]]/mEfft$deffMass[[j]]) > 1
+         && abs(mEfft$effMass[[k]]/mEfft$deffMass[[k]]) > 1
+         )
       {
-        # ### TO DO ### check if the replacing
-        # of nans has a significant effect on the fit
-        fitEffectiveMass <- fit.effectivemass(effectiveMass
-                                                , t1 = j
-                                                , t2 = k
-                                                , useCov = FALSE
-                                                , replace.na = FALSE)
+        fitmt1t2 <- fit.effectivemass(mEfft
+                                      , t1 = j
+                                      , t2 = k
+                                      , useCov = FALSE
+                                      , replace.na = FALSE)
+        ## ADD CONDITION ON FITTED PLATEAUX
+        mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
+        chi20 <- fitmt1t2$effmassfit$t0[[2]]
+        mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
+        chi2Boot <- fitmt1t2$effmassfit$t[, 2]
 
-        mt1t2 <- fitEffectiveMass$effmassfit$t0[[1]]
-        dmt1t2 <- fitEffectiveMass$effmassfit$se
-        chi2 <- fitEffectiveMass$chisqr[[1,1]]
+        wt1t20 <- exp(-0.5 * (chi20 + 2 + 2 * (k - j)))
+        pt1t20 <- mt1t20 * wt1t20
+        wt1t2Boot <- exp(-0.5 * (chi2Boot + 2 + 2 * (k - j)))
+        pt1t2Boot <- mt1t2Boot * wt1t2Boot
 
-        if(mt1t2>0 && mt1t2/dmt1t2>=1)
-        {
-          # ### TO DO: ### check 2 * (k-j) or (k-j) ??
-          wAICt1t2 <- exp(-0.5 * (chi2 + 2 + 2 * (k - j)))
-          # check if summing to 1
-          normZ <- normZ + wAICt1t2
-
-          wAIC[[length(wAIC) + 1]] <- wAICt1t2 * mt1t2
-        }
+        w0Lst[[length(w0Lst) + 1]] <- wt1t20
+        p0Lst[[length(p0Lst) + 1]] <- pt1t20
+        wBootLst[[length(wBootLst) + 1]] <- wt1t2Boot
+        pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
       }
     }
   }
 
-  wAIC <- unlist(wAIC)/normZ
-  mEff0 <- sum(wAIC)
+  p0 <- Reduce(`+`, p0Lst)
+  normZ0 <- Reduce(`+`, w0Lst)
+  pBoot <- Reduce(`+`, pBootLst)
+  normZBoot <- Reduce(`+`, wBootLst)
 
-  # bootstrapping the AIC procedure
-  mEffBoot <- list()
-
-  for(counterBootSamples in 1:bootSamples)
-  {
-    wAIC <- list()
-    normZ <- 0
-
-    # performing constant fits for all possible continuous ranges within
-    # t = 1 and t = tMax with a minimum of at least three support points
-    for (j in 0:(finiteEffectiveMasses-3))
-    {
-      for (k in (j+2):(finiteEffectiveMasses-1))
-      {
-        # performing the fit only if both points are finite!
-        if(is.na(effectiveMass$t0[j+1]) == FALSE
-            && is.na(effectiveMass$t0[k+1]) == FALSE)
-        {
-          # ### TO DO ### check if the replacing
-          # of nans has a significant effect on the fit
-          fitEffectiveMass <- fit.effectivemass(effectiveMass
-                                                  , t1 = j
-                                                  , t2 = k
-                                                  , useCov = FALSE
-                                                  , replace.na = FALSE)
-
-          mt1t2 <- fitEffectiveMass$effmassfit$t[[counterBootSamples,1]]
-          dmt1t2 <- fitEffectiveMass$effmassfit$se
-          chi2 <- fitEffectiveMass$effmassfit$t[counterBootSamples,2]
-
-          if(mt1t2>0 && mt1t2/dmt1t2>=1)
-          {
-            # ### TO DO: ### check 2 * (k-j) or (k-j) ??
-            wAICt1t2 <- exp(-0.5 * (chi2 + 2 + 2 * (k - j)))
-
-            normZ <- normZ + wAICt1t2
-
-            wAIC[[length(wAIC) +1]] <- wAICt1t2 * mt1t2
-          }
-        }
-      }
-    }
-    wAIC <- unlist(wAIC)/normZ
-    mEffBoot[[length(mEffBoot)+1]] <- sum(wAIC)
-  }
-
-  print(mEff0)
-  print(unlist(mEffBoot)-mEff0)
+  mEffAIC0[i] <- p0/normZ0
+  mEffAICBoot[, i] <- pBoot/normZBoot
 }
+
+mEffAIC <- list(t0 = mEffAIC0, t = mEffAICBoot)
