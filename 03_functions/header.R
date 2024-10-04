@@ -11,7 +11,7 @@ betaArray <- c(1.65)
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 200
+bootSamples <- 10
 blockSizeAnalysis <- 2
 blockSize <- 100
 
@@ -43,6 +43,7 @@ writePath <- function(x)
 {
   paste0("/home/negro/projects/stepscaling/RU1/02_output/data/",x, "/")
 }
+
 
 
 

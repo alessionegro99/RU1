@@ -6,6 +6,35 @@ exponential <- function (par, x, boot.R, ...) par[1] * exp( -par[2] * x )
 
 # various helpful functions
 
+dnormWeightedSum <- function(x, means, sds, weights) {
+  if (length(means) != length(sds) || length(sds) != length(weights)) {
+    stop("All input lists (means, sds, weights) must have the same length")
+  }
+
+  weightedSum <- sum(mapply(function(mu, sigma, w) {
+    w * dnorm(x, mean = mu, sd = sigma)
+  }, means, sds, weights))
+
+  return(weightedSum)
+}
+
+pnormWeightedSumNormalized <- function(x, means, sds, weights, norm) {
+  # Check that all lists are the same length
+  if (length(means) != length(sds) || length(sds) != length(weights)) {
+    stop("All input lists (means, sds, weights) must have the same length")
+  }
+
+  # Use mapply to compute the weighted sum of normal CDFs
+  weightedSum <- sum(mapply(function(mu, sigma, w) {
+    w * pnorm(x, mean = mu, sd = sigma)
+  }, means, sds, weights))
+
+  return(weightedSum/norm)
+}
+
+cdfShiftQuantile <- function(x, means, sds, weights, quantile, norm)
+  pnormWeightedSumNormalized(x, means, sds, weights, norm) - quantile
+
 # extracts the Wilson loop(s) timeSeries and puts it into a cf-type object
 wLoopToCf <- function (dataPath
                        , dataFile
@@ -27,8 +56,8 @@ wLoopToCf <- function (dataPath
   nconfs <- matrixDim[2] - 1
 
   # maximum of the extents of the Wilson loops measured
-  nsMax = sizeWLoops * spatialExtent
-  ntMax = sizeWLoops * temporalExtent
+  nsMax <- sizeWLoops * spatialExtent
+  ntMax <- sizeWLoops * temporalExtent
 
   # extracting <W(r,t)> for fixed r
   colIndex <- seq(from = r, to = (ntMax-1)*nsMax + r, by = nsMax)
@@ -396,7 +425,6 @@ computeEffectiveMassAIC <- function(spatialExtent
                                         , useCov = FALSE
                                         , replace.na = FALSE)
 
-          ## ADD CONDITION ON FITTED PLATEAUX
           mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
           chi20 <- fitmt1t2$effmassfit$t0[[2]]
           mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
