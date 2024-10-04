@@ -325,8 +325,8 @@ computeEffectiveMassAIC <- function(spatialExtent
                                     , invCoupling
                                     , sizeWLoops
                                     , thermSkip
-                                    , tMax
-                                    , rMax)
+                                    , spatialExtentMax
+                                    , temporalExtentMax)
 {
   betaPrecision <- sprintf("%.6f", invCoupling)
 
@@ -349,7 +349,10 @@ computeEffectiveMassAIC <- function(spatialExtent
     cat("Directory created:", writePath, "\n")
   }
 
-  for(i in 1:rMax)
+  mEffAIC0 <- c(rep(0, spatialExtentMax))
+  mEffAICBoot <- matrix(0, nrow = bootSamples, ncol = spatialExtentMax)
+
+  for(i in 1:spatialExtentMax)
   {
     Wt <- wLoopToCf(dataPath
                     , dataFile
@@ -358,40 +361,68 @@ computeEffectiveMassAIC <- function(spatialExtent
                     , sizeWLoops
                     , i
                     , thermSkip)
+
     Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
 
-    effectiveMass <- bootstrap.effectivemass(Wt, type = "log")
+    mEfft <- bootstrap.effectivemass(Wt, type = "log")
+    #countNA <- length(which(is.na(mEfft$t)))
 
-    # due to noise some NaNs could pop up
-    countFiniteEffMass <- sum(!is.na(effectiveMass[[2]]))
+    m0Lst <- list()
+    w0Lst <- list()
+    p0Lst <- list()
+    mBootLst <- list()
+    wBootLst <- list()
+    pBootLst <- list()
 
-    AIC <- matrix(, nrow = tMax, ncolumn = tMax)
-
-    # performing constant fits for all possible continuous ranges within
-    # t = 1 and t = tMax with a minimum of at least three support points
-    for (j in 0:(numFiniteEffMass-3))
+    for (j in 1:(temporalExtentMax - 1 - 2))
     {
-      for (k in (j+2):(numFiniteEffMass-1))
+      for (k in (j + 2):(temporalExtentMax - 1))
       {
-        # performing the fit only if both points are finite!
-        if(is.na(effectiveMass$t0[j+1]) == FALSE && is.na(effectiveMass$t0[k+1]) == FALSE)
+        if(is.na(mEfft$effMass[[j]]) == FALSE
+           && is.na(mEfft$effMass[[k]]) == FALSE
+           && is.na(mEfft$deffMass[[j]]) == FALSE
+           && is.na(mEfft$deffMass[[k]]) == FALSE
+           && mEfft$effMass[[j]] > 0
+           && mEfft$effMass[[k]] > 0
+           && abs(mEfft$effMass[[j]]/mEfft$deffMass[[j]]) > 1
+           && abs(mEfft$effMass[[k]]/mEfft$deffMass[[k]]) > 1
+           && length(which(is.na(mEfft$t[, j]))) == 0
+           && length(which(is.na(mEfft$t[, k]))) == 0
+        )
         {
-          # ### TO DO ### check if the replacing of nans has a significant effect on the fit
-          fitEffectiveMass <- fit.effectivemass(effectiveMass, t1 = j, t2 = k, useCov = FALSE, replace.na = FALSE)
+          fitmt1t2 <- fit.effectivemass(mEfft
+                                        , t1 = j
+                                        , t2 = k
+                                        , useCov = FALSE
+                                        , replace.na = FALSE)
 
-          t1 <- effectiveMass$fitEffectiveMass$t1
-          t2 <- effectiveMass$fitEffectiveMass$t2
-          meff <- effectiveMass$fitEffectiveMass$t0[[1]]
-          dmeff <- effectiveMass$fitEffectiveMass$se
-          chi2 <- effectiveMass$fitEffectiveMass$chisqr
-          dof <- effectiveMass$dof
-          chi2red <- chi2/dof
+          ## ADD CONDITION ON FITTED PLATEAUX
+          mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
+          chi20 <- fitmt1t2$effmassfit$t0[[2]]
+          mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
+          chi2Boot <- fitmt1t2$effmassfit$t[, 2]
 
+          wt1t20 <- exp(-0.5 * (chi20 + 2 + 2 * (k - j)))
+          pt1t20 <- mt1t20 * wt1t20
+          wt1t2Boot <- exp(-0.5 * (chi2Boot + 2 + 2 * (k - j)))
+          pt1t2Boot <- mt1t2Boot * wt1t2Boot
 
-
+          w0Lst[[length(w0Lst) + 1]] <- wt1t20
+          p0Lst[[length(p0Lst) + 1]] <- pt1t20
+          wBootLst[[length(wBootLst) + 1]] <- wt1t2Boot
+          pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
         }
       }
     }
+
+    p0 <- Reduce(`+`, p0Lst)
+    normZ0 <- Reduce(`+`, w0Lst)
+    pBoot <- Reduce(`+`, pBootLst)
+    normZBoot <- Reduce(`+`, wBootLst)
+
+    mEffAIC0[i] <- p0/normZ0
+    mEffAICBoot[, i] <- pBoot/normZBoot
   }
+  mEffAIC <- list(t0 = mEffAIC0, t = mEffAICBoot)
 }
 

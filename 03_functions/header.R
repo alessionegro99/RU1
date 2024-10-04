@@ -11,7 +11,7 @@ betaArray <- c(1.65)
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 20
+bootSamples <- 200
 blockSizeAnalysis <- 2
 blockSize <- 100
 
