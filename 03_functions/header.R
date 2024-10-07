@@ -1,5 +1,6 @@
 library(hadron)
 library(latex2exp)
+library(purrr)
 
 # simulations parameters
 
@@ -11,7 +12,7 @@ betaArray <- c(1.65)
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 10
+bootSamples <- 1000
 blockSizeAnalysis <- 2
 blockSize <- 100
 
