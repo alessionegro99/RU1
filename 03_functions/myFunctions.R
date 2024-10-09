@@ -161,6 +161,7 @@ plotMCHistory <- function(spatialExtent
     for(j in 1:ntMax)
     {
       timeSeries <- wt$cf[, j]
+
       plot(timeSeries
            , xlab = TeX(r"($n_{configs}$)")
            , ylab = TeX(r"($\langle\textit{W}(r,t)\rangle$)")
@@ -174,6 +175,10 @@ plotMCHistory <- function(spatialExtent
                                       , temporalExtent
                                       , r"(, $\invCoupling$ =)"
                                       , invCoupling))))
+
+      myacf <- computeacf(timeSeries, 300)
+      plot(myacf)
+      summary(myacf)
     }
   }
   dev.off()
@@ -391,6 +396,121 @@ plotEffectiveMass <- function(spatialExtent
   dev.off()
 }
 
+# plateau extraction through consequential fits
+
+fitEffectiveMass <- function()
+{
+  betaPrecision <- sprintf("%.6f", invCoupling)
+
+  inputFileName <- inputFileName(spatialExtent
+                                 , temporalExtent
+                                 , invCoupling
+                                 , sizeWLoops)
+  dataFile <- dataFile(spatialExtent, temporalExtent, betaPrecision)
+
+  dataPath <- dataPath(inputFileName)
+  plotPath <- plotPath(inputFileName)
+  writePath <- writePath(inputFileName)
+
+  if (!dir.exists(plotPath)) {
+    dir.create(plotPath, recursive = TRUE)
+    cat("Directory created:", plotPath, "\n")
+  }
+  if (!dir.exists(writePath)) {
+    dir.create(writePath, recursive = TRUE)
+    cat("Directory created:", writePath, "\n")
+  }
+
+  pdf(paste0(plotPath, "/mEffConstantFits.pdf"))
+  for(i in 1:spatialExtentMax)
+  {
+    Wt <- wLoopToCf(dataPath
+                    , dataFile
+                    , spatialExtent
+                    , temporalExtent
+                    , sizeWLoops
+                    , i
+                    , thermSkip)
+
+    Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
+
+    mEfft <- bootstrap.effectivemass(Wt, type = "log")
+
+    m0Lst <- list()
+    dm0Lst <- list()
+    w0Lst <- list()
+    p0Lst <- list()
+    mBootLst <- list()
+    wBootLst <- list()
+    pBootLst <- list()
+
+    for (j in 1:(temporalExtentMax - 1 - 2))
+    {
+      for (k in (j + 2):(temporalExtentMax - 1))
+      {
+        if(is.na(mEfft$effMass[[j]]) == FALSE
+           && is.na(mEfft$effMass[[k]]) == FALSE
+           && is.na(mEfft$deffMass[[j]]) == FALSE
+           && is.na(mEfft$deffMass[[k]]) == FALSE
+           && mEfft$effMass[[j]] > 0
+           && mEfft$effMass[[k]] > 0
+           && abs(mEfft$effMass[[j]]/mEfft$deffMass[[j]]) > 1
+           && abs(mEfft$effMass[[k]]/mEfft$deffMass[[k]]) > 1
+           && length(which(is.na(mEfft$t[, j]))) == 0
+           && length(which(is.na(mEfft$t[, k]))) == 0
+        )
+        {
+          fitmt1t2 <- fit.effectivemass(mEfft
+                                        , t1 = j
+                                        , t2 = k
+                                        , useCov = FALSE
+                                        , replace.na = TRUE)
+
+          mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
+          dmt1t20 <- fitmt1t2$effmassfit$se
+          chi20 <- fitmt1t2$effmassfit$t0[[2]]
+          mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
+          chi2Boot <- fitmt1t2$effmassfit$t[, 2]
+
+          ## check definition 2 * (k - j)
+
+          wt1t20 <- exp(-0.5 * (chi20 + 2 + 2 * (k - j)))
+          pt1t20 <- mt1t20 * wt1t20
+          wt1t2Boot <- exp(-0.5 * (chi2Boot + 2 + 2 * (k - j)))
+          pt1t2Boot <- mt1t2Boot * wt1t2Boot
+
+          m0Lst[[length(m0Lst) + 1]] <- mt1t20
+          dm0Lst[[length(dm0Lst) + 1]] <- dmt1t20
+          w0Lst[[length(w0Lst) + 1]] <- wt1t20
+          p0Lst[[length(p0Lst) + 1]] <- pt1t20
+          mBootLst[[length(mBootLst) + 1]] <- mt1t2Boot
+          wBootLst[[length(wBootLst) + 1]] <- wt1t2Boot
+          pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
+        }
+      }
+    }
+
+    if (length(p0Lst) == 0)
+    {
+      print(paste0("p0 == 0 for r =", i))
+      break
+    }
+
+    normZ0 <- Reduce(`+`, w0Lst)
+    normZBoot <- Reduce(`+`, wBootLst)
+
+    # weighting procedure to compute the effective mass
+    # first on the original data, then on the bootstrap samples
+
+    p0 <- Reduce(`+`, p0Lst)
+    pBoot <- Reduce(`+`, pBootLst)
+
+    mEffAICWeight0[i] <- p0/normZ0
+    mEffAICWeightBoot[, i] <- pBoot/normZBoot
+  }
+  dev.off()
+}
+
 # plateau extraction based on the Akaike information criterion
 # ### ADD REFERENCE HERE ###
 
@@ -498,6 +618,12 @@ computeEffectiveMassAIC <- function(spatialExtent
           pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
         }
       }
+    }
+
+    if (length(p0Lst) == 0)
+    {
+      print(paste0("p0 == 0 for r = ", i))
+      break
     }
 
     normZ0 <- Reduce(`+`, w0Lst)

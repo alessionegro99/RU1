@@ -4,15 +4,15 @@ library(purrr)
 
 # simulations parameters
 
-spatialExtent <- 28
-temporalExtent <- 32
-sizeWLoops <- 0.5
-betaArray <- c(1.65)
+spatialExtent <- 32
+temporalExtent <- 16
+sizeWLoops <- 1
+betaArray <- seq(1.55, 2, 0.05)
 
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 1000
+bootSamples <- 500
 blockSizeAnalysis <- 2
 blockSize <- 100
 
