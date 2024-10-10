@@ -7,12 +7,12 @@ library(purrr)
 spatialExtent <- 32
 temporalExtent <- 16
 sizeWLoops <- 1
-betaArray <- seq(1.55, 2, 0.05)
+betaArray <- seq(1.75, 2, 0.05)
 
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 500
+bootSamples <- 10
 blockSizeAnalysis <- 2
 blockSize <- 100
 

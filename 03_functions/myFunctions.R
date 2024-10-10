@@ -26,6 +26,19 @@ exponential <- function (par, x, boot.R, ...)
 
 # various helpful functions
 
+subtractColMins <- function(vecLst)
+{
+  n <- length(vecLst[[1]])
+
+  mins <- sapply(1:n, function(i) min(sapply(vecLst, function(v) v[i])))
+
+  newLst <- lapply(vecLst, function(v){
+    v - mins
+  })
+
+  return(newLst)
+}
+
 dnormWeightedSum <- function(x, means, sds, weights)
 {
   if (length(means) != length(sds) || length(sds) != length(weights)) {
@@ -54,7 +67,8 @@ pnormWeightedSumNormalized <- function(x, means, sds, weights, norm)
   return(weightedSum/norm)
 }
 
-cdfShiftQuantile <- function(x, means, sds, weights, quantile, norm){
+cdfShiftQuantile <- function(x, means, sds, weights, quantile, norm)
+{
   pnormWeightedSumNormalized(x, means, sds, weights, norm) - quantile
 }
 
@@ -398,7 +412,13 @@ plotEffectiveMass <- function(spatialExtent
 
 # plateau extraction through consequential fits
 
-fitEffectiveMass <- function()
+plotPlateauFit <- function(spatialExtent
+                             , temporalExtent
+                             , invCoupling
+                             , sizeWLoops
+                             , thermSkip
+                             , spatialExtentMax
+                             , temporalExtentMax)
 {
   betaPrecision <- sprintf("%.6f", invCoupling)
 
@@ -436,13 +456,7 @@ fitEffectiveMass <- function()
 
     mEfft <- bootstrap.effectivemass(Wt, type = "log")
 
-    m0Lst <- list()
-    dm0Lst <- list()
-    w0Lst <- list()
-    p0Lst <- list()
-    mBootLst <- list()
-    wBootLst <- list()
-    pBootLst <- list()
+    # plots every fit for a minum of 3 support points up to temporalExtentMax
 
     for (j in 1:(temporalExtentMax - 1 - 2))
     {
@@ -466,47 +480,10 @@ fitEffectiveMass <- function()
                                         , useCov = FALSE
                                         , replace.na = TRUE)
 
-          mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
-          dmt1t20 <- fitmt1t2$effmassfit$se
-          chi20 <- fitmt1t2$effmassfit$t0[[2]]
-          mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
-          chi2Boot <- fitmt1t2$effmassfit$t[, 2]
-
-          ## check definition 2 * (k - j)
-
-          wt1t20 <- exp(-0.5 * (chi20 + 2 + 2 * (k - j)))
-          pt1t20 <- mt1t20 * wt1t20
-          wt1t2Boot <- exp(-0.5 * (chi2Boot + 2 + 2 * (k - j)))
-          pt1t2Boot <- mt1t2Boot * wt1t2Boot
-
-          m0Lst[[length(m0Lst) + 1]] <- mt1t20
-          dm0Lst[[length(dm0Lst) + 1]] <- dmt1t20
-          w0Lst[[length(w0Lst) + 1]] <- wt1t20
-          p0Lst[[length(p0Lst) + 1]] <- pt1t20
-          mBootLst[[length(mBootLst) + 1]] <- mt1t2Boot
-          wBootLst[[length(wBootLst) + 1]] <- wt1t2Boot
-          pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
+          plot(fitmt1t2)
         }
       }
     }
-
-    if (length(p0Lst) == 0)
-    {
-      print(paste0("p0 == 0 for r =", i))
-      break
-    }
-
-    normZ0 <- Reduce(`+`, w0Lst)
-    normZBoot <- Reduce(`+`, wBootLst)
-
-    # weighting procedure to compute the effective mass
-    # first on the original data, then on the bootstrap samples
-
-    p0 <- Reduce(`+`, p0Lst)
-    pBoot <- Reduce(`+`, pBootLst)
-
-    mEffAICWeight0[i] <- p0/normZ0
-    mEffAICWeightBoot[, i] <- pBoot/normZBoot
   }
   dev.off()
 }
@@ -523,6 +500,7 @@ computeEffectiveMassAIC <- function(spatialExtent
                                     , temporalExtentMax)
 {
   betaPrecision <- sprintf("%.6f", invCoupling)
+
 
   inputFileName <- inputFileName(spatialExtent
                                  , temporalExtent
@@ -544,7 +522,9 @@ computeEffectiveMassAIC <- function(spatialExtent
   }
 
   mEffAICWeight0 <- c(rep(0, spatialExtentMax))
+  errAICWeight0 <- c(rep(0, spatialExtentMax))
   mEffAICWeightBoot <- matrix(0, nrow = bootSamples, ncol = spatialExtentMax)
+  errAICWeightBoot <- matrix(0, nrow = bootSamples, ncol = spatialExtentMax)
 
   mEffAICQuantile0 <- c(rep(0, spatialExtentMax))
   errAICQuantile0 <- c(rep(0, spatialExtentMax))
@@ -567,12 +547,15 @@ computeEffectiveMassAIC <- function(spatialExtent
     mEfft <- bootstrap.effectivemass(Wt, type = "log")
 
     m0Lst <- list()
-    dm0Lst <- list()
-    w0Lst <- list()
-    p0Lst <- list()
     mBootLst <- list()
+
+    mSq0Lst <- list()
+    mSqBootLst <- list()
+
+    dm0Lst <- list()
+
+    w0Lst <- list()
     wBootLst <- list()
-    pBootLst <- list()
 
     for (j in 1:(temporalExtentMax - 1 - 2))
     {
@@ -596,35 +579,34 @@ computeEffectiveMassAIC <- function(spatialExtent
                                         , useCov = FALSE
                                         , replace.na = TRUE)
 
-          mt1t20 <- fitmt1t2$effmassfit$t0[[1]]
-          dmt1t20 <- fitmt1t2$effmassfit$se
-          chi20 <- fitmt1t2$effmassfit$t0[[2]]
-          mt1t2Boot <- fitmt1t2$effmassfit$t[, 1]
-          chi2Boot <- fitmt1t2$effmassfit$t[, 2]
+          m0Lst[[length(m0Lst) + 1]] <- fitmt1t2$effmassfit$t0[[1]]
+          mBootLst[[length(mBootLst) + 1]] <- fitmt1t2$effmassfit$t[, 1]
 
-          ## check definition 2 * (k - j)
+          dm0Lst[[length(dm0Lst) + 1]] <- fitmt1t2$effmassfit$se
 
-          wt1t20 <- exp(-0.5 * (chi20 + 2 + 2 * (k - j)))
-          pt1t20 <- mt1t20 * wt1t20
-          wt1t2Boot <- exp(-0.5 * (chi2Boot + 2 + 2 * (k - j)))
-          pt1t2Boot <- mt1t2Boot * wt1t2Boot
+          mSq0Lst[[length(mSq0Lst) + 1]] <- fitmt1t2$effmassfit$t0[[1]] ** 2
+          mSqBootLst[[length(mSqBootLst) + 1]] <- fitmt1t2$effmassfit$t[, 1] ** 2
 
-          m0Lst[[length(m0Lst) + 1]] <- mt1t20
-          dm0Lst[[length(dm0Lst) + 1]] <- dmt1t20
-          w0Lst[[length(w0Lst) + 1]] <- wt1t20
-          p0Lst[[length(p0Lst) + 1]] <- pt1t20
-          mBootLst[[length(mBootLst) + 1]] <- mt1t2Boot
-          wBootLst[[length(wBootLst) + 1]] <- wt1t2Boot
-          pBootLst[[length(pBootLst) + 1]] <- pt1t2Boot
+          # computing AIC weights
+
+          w0Lst[[length(w0Lst) + 1]] <- exp(-0.5 * (fitmt1t2$effmassfit$t0[[2]] + 2 + 2 * (k - j)))
+          wBootLst[[length(wBootLst) + 1]] <- exp(-0.5 * (fitmt1t2$effmassfit$t[, 2] + 2 + 2 * (k - j)))
         }
       }
     }
 
-    if (length(p0Lst) == 0)
+    if (length(m0Lst) == 0)
     {
-      print(paste0("p0 == 0 for r = ", i))
+      print(paste0("No meaningful fits available for r = "
+                   , i
+                   , " interrupting procedure ..."))
       break
     }
+
+    # a global shift does not
+
+    lapply(w0Lst, function(x, subtAmnt) x - subtAmnt, subtAmnt = min(unlist(w0Lst)))
+    #wBootLst <- subtractColMins(wBootLst)
 
     normZ0 <- Reduce(`+`, w0Lst)
     normZBoot <- Reduce(`+`, wBootLst)
@@ -632,11 +614,22 @@ computeEffectiveMassAIC <- function(spatialExtent
     # weighting procedure to compute the effective mass
     # first on the original data, then on the bootstrap samples
 
-    p0 <- Reduce(`+`, p0Lst)
-    pBoot <- Reduce(`+`, pBootLst)
+    wm0Lst <- Map(`*`, m0Lst, w0Lst)
+    wmBootLst <- Map(`*`, mBootLst, wBootLst)
 
-    mEffAICWeight0[i] <- p0/normZ0
-    mEffAICWeightBoot[, i] <- pBoot/normZBoot
+    wmSq0Lst <- Map(`*`, mSq0Lst, w0Lst)
+    wmSqBootLst <- Map(`*`, mSqBootLst, wBootLst)
+
+    m0 <- Reduce(`+`, wm0Lst)
+    mBoot <- Reduce(`+`, wmBootLst)
+
+    mSq0 <- Reduce(`+`, wmSq0Lst)
+    mSqBoot <- Reduce(`+`, wmSqBootLst)
+
+    mEffAICWeight0[i] <- m0/normZ0
+    errAICWeight0[i] <- mSq0/normZ0 - (m0/normZ0) ** 2
+    mEffAICWeightBoot[, i] <- mBoot/normZBoot
+    errAICWeightBoot[, i] <- 1/normZBoot * mSqBoot - (mBoot/normZBoot) ** 2
 
     # quantile procedure to compute the effective mass
     # first on the original data, then on the bootstrap samples
@@ -762,7 +755,7 @@ computeEffectiveMassAIC <- function(spatialExtent
   }
   dev.off()
 
-  weightingProcedure <- list(res0 = mEffAICWeight0, rest = mEffAICWeightBoot)
+  weightingProcedure <- list(res0 = mEffAICWeight0, err0 = sqrt(errAICWeight0), rest = mEffAICWeightBoot, errt = sqrt(errAICWeightBoot))
   quantileProcedure <- list(res0 = mEffAICQuantile0, err0 = errAICQuantile0, rest = mEffAICQuantileBoot, errt = errAICQuantileBoot)
   mEffAIC <- list(wP = weightingProcedure, qP = quantileProcedure)
 
