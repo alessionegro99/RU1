@@ -26,13 +26,14 @@ exponential <- function (par, x, boot.R, ...)
 
 # various helpful functions
 
-r2F <- function(potential, r1, r2){
-  g0 <- (potential$res0[r2]-potential$res0[r1])/(r2-r1)
-  gBoot <- (potential$rest[, r2]-potential$rest[, r1])/(r2-r1)
+r2F <- function(potential, r1, r2)
+{
+  g0 <- r1 ** 2 * (potential$res0[r2]-potential$res0[r1])/(r2-r1)
+  gBoot <- r1 ** 2 * (potential$rest[, r2]-potential$rest[, r1])/(r2-r1)
 
-  r2F <- list(g0 = g0, gBoot = gBoot)
+  res <- list(g0 = g0, gBoot = gBoot)
 
-  return(r2F)
+  return(res)
 }
 
 subtractColMins <- function(vecLst)
@@ -300,6 +301,8 @@ plotWrt <- function(spatialExtent
   nsMax <- spatialExtent * sizeWLoops
   ntMax <- temporalExtent * sizeWLoops
 
+  Wr <- list()
+
   pdf(paste0(plotPath, "/wilsonloop.pdf"))
   for(i in 1:nsMax){
 
@@ -361,8 +364,11 @@ plotWrt <- function(spatialExtent
                                       , r"(, $\invCoupling$=)"
                                       , invCoupling))))
       }
+    Wr[[length(Wr) + 1]] <- Wt
     }
   dev.off()
+
+  return(Wr)
 }
 
 

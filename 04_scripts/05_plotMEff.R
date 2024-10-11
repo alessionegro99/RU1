@@ -55,8 +55,19 @@ r1 <- 1
 #   dev.off()
 # }
 
+phi1 <- acos(7.148918e-01)
+phi2 <- acos(5.384919e-01)
+phi3 <- acos(-8.178944e-02)
 
 
+for(i in c(1,2)){
+  for(j in c(1,2)){
+    for( k in c(1,2)){
+      phi <- (-1)**k*phi3 + (-1)**j*phi2 + (-1)**i*phi1
+      print(phi/pi)
+    }
+  }
+}
 
 
 # for(beta in 1.55)
