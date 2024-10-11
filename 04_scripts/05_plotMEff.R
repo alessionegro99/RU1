@@ -8,45 +8,56 @@ sMax <- 8
 tMaxi <- 8
 tMaxf <- 16
 
-for(beta in 1.6)
-{
-  inputFileName <- inputFileName(spatialExtent
-                                 , temporalExtent
-                                 , invCoupling = beta
-                                 , sizeWLoops)
+r3 <- 3
+r2 <- 2
+r1 <- 1
 
-  writePath <- writePath(inputFileName)
-  plotPath <- plotPath(inputFileName)
+# for(beta in 2)
+# {
+#   inputFileName <- inputFileName(spatialExtent
+#                                  , temporalExtent
+#                                  , invCoupling = beta
+#                                  , sizeWLoops)
+#
+#   writePath <- writePath(inputFileName)
+#   plotPath <- plotPath(inputFileName)
+#
+#   x<-c(1:sMax)
+#
+#   pal <- colorRampPalette(c("red", "blue"))
+#
+#   colors <- pal(tMaxf - tMaxi)
+#
+#   pdf(paste0(plotPath, "mEffvstMax.pdf"))
+#
+#   mEff <- readRDS(paste0(writePath, paste0("mEfftMax", tMaxi, "sMax", sMax,".rds")))
+#
+#   y <- mEff$qP$res0
+#   dy <- mEff$qP$err0
+#
+#   r2F <- r2F(mEff$qP, r3, r1)
+#
+#   plotwitherror(x, y, dy, col = colors[1], xlab = "r", ylab = "mEff")
+#
+#   for(tMax in (tMaxi+1):tMaxf)
+#   {
+#     mEff <- readRDS(paste0(writePath, paste0("mEfftMax", tMax, "sMax", sMax,".rds")))
+#
+#     y <- mEff$qP$res0
+#     dy <- mEff$qP$err0
+#
+#     plotwitherror(x, y, dy, col = colors[tMax-tMaxi+1], rep = TRUE)
+#   }
+#   legend(x = "bottomright",          # Position
+#          legend = paste0("beta = ", betaArray),  # Legend texts
+#          col = colors,           # Line colors
+#          lwd = 2)                 # Line width
+#   dev.off()
+# }
 
-  x<-c(1:sMax)
-
-  pal <- colorRampPalette(c("red", "blue"))
-
-  colors <- pal(tMaxf - tMaxi)
-
-  pdf(paste0(plotPath, "mEffvstMax.pdf"))
-
-  mEff <- readRDS(paste0(writePath, paste0("mEfftMax", tMaxi, "sMax", sMax,".rds")))
-
-  y <- mEff$qP$res0
-  dy <- mEff$qP$err0
-
-  plotwitherror(x, y, dy, col = colors[1])
 
 
-  count = 0
-  for(tMax in (tMaxi+1):tMaxf)
-  {
-    count = count + 1
-    mEff <- readRDS(paste0(writePath, paste0("mEfftMax", tMax, "sMax", sMax,".rds")))
 
-    y <- mEff$qP$res0
-    dy <- mEff$qP$err0
-
-    plotwitherror(x, y, dy, col = colors[tMax-tMaxi+1], rep = TRUE)
-  }
-  dev.off()
-}
 
 # for(beta in 1.55)
 # {

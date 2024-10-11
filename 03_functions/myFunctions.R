@@ -26,6 +26,15 @@ exponential <- function (par, x, boot.R, ...)
 
 # various helpful functions
 
+r2F <- function(potential, r1, r2){
+  g0 <- (potential$res0[r2]-potential$res0[r1])/(r2-r1)
+  gBoot <- (potential$rest[, r2]-potential$rest[, r1])/(r2-r1)
+
+  r2F <- list(g0 = g0, gBoot = gBoot)
+
+  return(r2F)
+}
+
 subtractColMins <- function(vecLst)
 {
   n <- length(vecLst[[1]])

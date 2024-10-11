@@ -12,7 +12,7 @@ betaArray <- seq(1.55, 2, 0.05)
 # values to be used in the subsequent scripts
 
 thermSkip <- 1000
-bootSamples <- 10
+bootSamples <- 500
 blockSizeAnalysis <- 2
 blockSize <- 100
 

@@ -7,7 +7,8 @@ sMax <- 8
 
 for(beta in betaArray)
 {
-  for(tMax in 8:16)
+  print(paste("Currently beta =", beta))
+  for(tMax in 16)
   {
     mEff <- computeEffectiveMassAIC(spatialExtent
                             , temporalExtent
