@@ -26,6 +26,61 @@ exponential <- function (par, x, boot.R, ...)
 
 # various helpful functions
 
+plotWrtMirrored <- function(spatialExtent
+                            , temporalExtent
+                            , invCoupling
+                            , sizeWLoops
+                            , labStep)
+{
+  inputFileName <- inputFileName(spatialExtent
+                                 , temporalExtent
+                                 , invCoupling
+                                 , sizeWLoops)
+
+  writePath <- writePath(inputFileName)
+  plotPath <- plotPath(inputFileName)
+
+  wrt <- readRDS(paste0(writePath, "wrt.rds"))
+
+  x1 <- c(1:temporalExtent)
+  x2 <- c((2 * temporalExtent - 1):temporalExtent)
+
+  pdf(paste0(plotPath, "wrtMirrored.pdf"))
+  for(r in c(1:(floor(spatialExtent/2))))
+  {
+    y1 <- wrt[[r]]$cf.tsboot$t0
+    y2 <- wrt[[spatialExtent - r]]$cf.tsboot$t0
+
+    dy1 <- apply(wrt[[r]]$cf.tsboot$t, 2, sd)
+    dy2 <- apply(wrt[[spatialExtent-r]]$cf.tsboot$t, 2, sd)
+
+    labelli <- c(seq(1, temporalExtent - labStep, labStep), paste0("T = ", temporalExtent), seq(temporalExtent- labStep, 1,  - labStep))
+
+    plotwitherror(x = x1
+                  , y = y1
+                  , dy = dy1
+                  , xlim = c(1, 2 * temporalExtent - 1)
+                  , xaxt = 'n'
+                  , col = "red"
+                  , ylab = "<W(r,t)>"
+                  , xlab = "t"
+                  , main = paste0("<W> for r1 = ", r, ", r2 = ", spatialExtent - r, ", L = ", spatialExtent, " T = ", temporalExtent, ", beta = ", beta))
+    axis(1, at = seq(1, 2 * temporalExtent - 1, 3), labels = labelli)
+    plotwitherror(x = x2
+                  , y = y2
+                  , dy = dy2
+                  , col = "blue"
+                  , xlim = c(1, 2 * temporalExtent - 1)
+                  , rep = TRUE)
+
+    legend(x = "topright",
+           legend = c(paste0("W(r = ", r, ")"), paste0("W(r = ",  spatialExtent - r , ")")),
+           col = c("red", "blue"),
+           lwd = 2)
+  }
+  dev.off()
+}
+
 r2F <- function(potential, r1, r2)
 {
   g0 <- r1 ** 2 * (potential$res0[r2]-potential$res0[r1])/(r2-r1)
@@ -495,7 +550,7 @@ plotPlateauFit <- function(spatialExtent
                                         , useCov = FALSE
                                         , replace.na = TRUE)
 
-          plot(fitmt1t2)
+          plot(fitmt1t2, xlab = "t", ylab = "mEff", main = paste0("Plateau fit from", j, " to ", k))
         }
       }
     }

@@ -19,6 +19,9 @@ g1Boot <- list()
 g20 <- list()
 g2Boot <- list()
 
+# for every value of beta, computing g1 and g2 from r1 and r2
+# (forward finite difference numerical derivative)
+
 for(beta in betaArray)
 {
   source("~/projects/stepscaling/RU1/03_functions/header.R")
@@ -63,7 +66,7 @@ fitResultg1 <- bootstrap.nlsfit(fn, c(0,1), y = y1[betaMin:betaMax], x = betaArr
 print(summary(fitResultg1))
 
 pdf(paste0(plotPath, "fitg1.pdf"))
-plot(fitResultg1)
+plot(fitResultg1, xlab = "beta", ylab = "r1^2F(r1,g)", main = "fit for r1 = 1")
 dev.off()
 
 fitResultg2 <- bootstrap.nlsfit(fn, c(0,1), y = y2[betaMin:betaMax], x = betaArray[betaMin:betaMax], y2Boot[,betaMin:betaMax], dy = dy2[betaMin:betaMax])
@@ -71,13 +74,20 @@ fitResultg2 <- bootstrap.nlsfit(fn, c(0,1), y = y2[betaMin:betaMax], x = betaArr
 print(summary(fitResultg2))
 
 pdf(paste0(plotPath, "fitg2.pdf"))
-plot(fitResultg2)
+plot(fitResultg2, xlab = "beta", ylab = "r2^2F(r2,g)", main = "fit for r2 = 2")
 dev.off()
 
-pdf(paste0(plotPath, "gvsbeta.pdf"))
+plotsDir <- "/home/negro/projects/stepscaling/RU1/02_output/plots/stepScalingPlots/"
 
-plotwitherror(betaArray, y1, dy1, col = "red", ylim = c(0, 1), xlab = "beta=1/g^2", ylab = "r^2F(r,g)")
-plotwitherror(rep = TRUE, betaArray, y2, dy2, col = "blue", ylim = c(0, 1), xlab = "beta=1/g^2", ylab = "r^2F(r,g)")
+if (!dir.exists(plotsDir)) {
+  dir.create(plotsDir, recursive = TRUE)
+  cat("Directory created:", plotsDir, "\n")
+}
+
+pdf(paste0(plotsDir, "gvsbetaL", spatialExtent, "T", temporalExtent, ".pdf"))
+
+plotwitherror(betaArray, y1, dy1, col = "red", ylim = c(0, 1), xlim = c(1.5, 2.05), xlab = "beta=1/g^2", ylab = "r^2F(r,g)", , main = "L=32, T=16, 1.55<=beta<=2")
+plotwitherror(rep = TRUE, betaArray, y2, dy2, col = "blue", ylim = c(0, 1), xlim = c(1.5, 2.05), xlab = "beta=1/g^2", ylab = "r^2F(r,g)", main = "L=32, T=16, 1.55<=beta<=2")
 
 legend(x = "topright",          # Position
 legend = c(paste0("r1^2F(r1,g), r1 = ", r1), paste0("r2^2F(r2,g), r2 = ", r2)),  # Legend texts
@@ -86,4 +96,8 @@ lwd = 2)                 # Line width
 
 dev.off()
 
+# next value to compute
+
 newBeta <- fitResultg2$t0[2]/(y1[1] - fitResultg2$t0[1])
+print(newBeta)
+

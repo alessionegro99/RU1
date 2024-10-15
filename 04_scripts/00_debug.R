@@ -272,3 +272,7 @@ weightingProcedure <- list(res0 = mEffAICWeight0, err0 = sqrt(errAICWeight0), re
 quantileProcedure <- list(res0 = mEffAICQuantile0, err0 = errAICQuantile0, rest = mEffAICQuantileBoot, errt = errAICQuantileBoot)
 mEffAIC <- list(wP = weightingProcedure, qP = quantileProcedure)
 
+labStep = 3
+
+labelli <- c(seq(1, temporalExtent - labStep, by = labStep), paste0("T = ", temporalExtent), seq(temporalExtent - labStep, 1, by = labStep))
+

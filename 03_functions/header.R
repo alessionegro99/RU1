@@ -4,10 +4,10 @@ library(purrr)
 
 # simulations parameters
 
-spatialExtent <- 3
+spatialExtent <- 32
 temporalExtent <- 16
 sizeWLoops <- 1
-betaArray <- 1.65#seq(1.55,2,0.05)
+betaArray <- seq(1.55,2,0.05)
 
 # values to be used in the subsequent scripts
 
@@ -44,6 +44,7 @@ writePath <- function(x)
 {
   paste0("/home/negro/projects/stepscaling/RU1/02_output/data/",x, "/")
 }
+
 
 
 
