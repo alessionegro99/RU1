@@ -7,7 +7,7 @@ library(purrr)
 spatialExtent <- 32
 temporalExtent <- 16
 sizeWLoops <- 1
-betaArray <- seq(1.55,2,0.05)
+betaArray <- seq(1.55, 2, 0.05)
 
 # values to be used in the subsequent scripts
 
