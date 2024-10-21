@@ -6,8 +6,8 @@ library(purrr)
 
 spatialExtent <- 32
 temporalExtent <- 16
-sizeWLoops <- 1
-betaArray <- seq(1.55, 2, 0.05)
+#sizeWLoops <- 1
+betaArray <- 2.05#seq(1.55, 2, 0.05)
 
 # values to be used in the subsequent scripts
 
@@ -18,11 +18,10 @@ blockSize <- 100
 
 # filenames
 
-inputFileName <- function(spatialExtent, temporalExtent, invCoupling, sizeWLoops, extra)
+inputFileName <- function(spatialExtent, temporalExtent, invCoupling, sizeWLoops, extra = 0)
 {
-  if(missing(extra))
-    extra <- ""
-  paste0("heatbathinput_", spatialExtent, "_", temporalExtent, "_3_", invCoupling,"_nover5_planartrue_size", sizeWLoops, extra)
+  #paste0("heatbathinput_", spatialExtent, "_", temporalExtent, "_3_", invCoupling,"_nover5_planartrue_size", sizeWLoops, extra)
+  paste0("heatbath_", spatialExtent, "_", temporalExtent, "_", invCoupling,"_", extra)
 }
 
 dataFile <- function(spatialExtent, temporalExtent, invCoupling)
