@@ -1,0 +1,276 @@
+---
+title: "Non planar Wilson loops"
+output:
+  pdf_document: def
+  html_document: def
+---
+```{r parameters}
+# load libraries
+library(hadron)
+library(latex2exp)
+
+# import functions
+source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
+
+# set parameters
+spatialExtent <- 3
+temporalExtent <- 32
+
+invCoupling <- 4
+
+extra <- 0
+
+rsq <- 8
+
+skipRead <- 250
+thermSkip <- 0
+bootSamples <- 1000
+blockSizeAnalysis <- 2
+blockSize <- 25
+
+t_0ind <- 4
+
+nComb <- count_sum_of_squares_with_duplicates(rsq)
+
+betaPrecision <- sprintf("%.6f", invCoupling)
+
+inputFileName <- inputFileName(spatialExtent
+                                 , temporalExtent
+                                 , invCoupling
+                                 , extra = extra)
+dataFile <- dataFileNP(spatialExtent
+                       , temporalExtent
+                       , betaPrecision)
+
+dataPath <- dataPath(inputFileName)
+plotPath <- plotPath(inputFileName)
+writePath <- writePath(inputFileName)
+
+
+if (!dir.exists(plotPath)) {
+  dir.create(plotPath, recursive = TRUE)
+  cat("Directory created:", plotPath, "\n")
+}
+
+
+if (!dir.exists(writePath)) {
+  dir.create(writePath, recursive = TRUE)
+  cat("Directory created:", writePath, "\n")
+}
+```
+
+## Extraction of non planar Wilson loops
+
+```{r WloopExtraction}
+cfWloopNP <- wLoopToCfNP(dataPath
+                  , dataFile
+                  , spatialExtent
+                  , temporalExtent
+                  , rsq = rsq
+                  , skip = skipRead)
+```
+
+## Thermalization
+
+```{r}
+t <- t_0ind + nComb +1
+
+timeSeries <- cfWloopNP$cf[, t]
+
+
+
+pdf(paste0(plotPath, "thermalization_rsq_", rsq, ".pdf"))
+plot(timeSeries
+     , xlab = TeX(r"($n_{configs}$)")
+     , ylab = TeX(r"($\langle\textit{W}(r,t)\rangle$)")
+     , main = TeX(sprintf(paste(r"(MC history of W( r² =)"
+                          , rsq
+                          , r"(, t =)"
+                          , t
+                          , r"(), L =)"
+                          , spatialExtent
+                          , r"(, T =)"
+                          , temporalExtent
+                          , r"(, $\invCoupling$ =)"
+                          , invCoupling))))
+dev.off()
+
+data <- data.frame(
+  x = c(1:length(timeSeries)),
+  y = timeSeries)
+fit <- lm(y ~ x, data = data)
+coef(fit)
+```
+
+## Equilibrium cf
+
+```{r}
+cfThermTmp <- cfWloopNP$cf[-(1:thermSkip),]
+
+nrow <- dim(cfThermTmp)[1]
+ncol <- dim(cfThermTmp)[2]
+
+cfTherm <- matrix(NA, nrow = nrow * nComb, ncol = ncol / nComb)
+
+for(i in seq(1,ncol/nComb)){
+  for(j in seq(1,nComb)){
+    cfTherm[(1 + nrow*(j-1)):(nrow*j), i] <- cfThermTmp[, (i-1) * nComb + j]
+  }
+}
+
+cfWloopNP$cf <- cfTherm
+
+rm(cfTherm, cfThermTmp)
+
+```
+
+## Bootstrap analysis
+
+```{r, results = 'hide', message = FALSE}
+t <- t_0ind + 1
+
+timeSeries <- cfWloopNP$cf[, t]
+
+pdf(paste0(plotPath, "bootstrapAnalysis_rsq_", rsq, ".pdf"))
+bootstrap.analysis(timeSeries
+                   , skip = thermSkip
+                   , boot.R = bootSamples
+                   , boot.l = blockSizeAnalysis
+                   , pl = TRUE)
+title(main = TeX(sprintf(paste(r"(Bootstrap error for W( r² =)"
+                         , rsq
+                         , r"(, t =)"
+                         , t
+                         , r"(), r = )", spatialExtent, r"(, T =)"
+                         , temporalExtent, r"(, $\invCoupling$ =)"
+                         , invCoupling))))
+dev.off()
+```
+
+## Compute Wloop
+
+```{r}
+Wt <- cfWloopNP
+Wt$cf <- Wt$cf[, -1]
+Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
+saveRDS(Wt, paste0(writePath, "wrt_rsq", rsq, ".pdf"))
+rm(Wt)
+```
+
+## plot Wloop 
+
+```{r}
+Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".pdf"))
+
+pdf(paste0(plotPath, "wilsonloop_NP_rsq_", rsq, ".pdf"))
+plot(Wt,
+     xlab = TeX(r"($t$)"),
+     ylab = TeX(r"($W_r(t)$)"),
+     main = TeX(sprintf(paste(r"($W_r$(t))"
+                                  , r"(, r =)"
+                                  , rsq
+                                  , r"(, L =)"
+                                  , spatialExtent
+                                  , r"(, T =)"
+                                  , temporalExtent
+                                  , r"(, $\invCoupling$ =)"
+                                  , invCoupling))))
+
+# expecting exponential decrease, plotting in logscale
+plot(Wt,
+     log = "y",
+     xlab = TeX(r"($t$)"),
+     ylab = TeX(r"($W_r(t)$)"),
+     main = TeX(sprintf(paste(r"(logscale, $W_r$(t))"
+                                  , r"(, r =)"
+                                  , rsq
+                                  , r"(, L =)"
+                                  , spatialExtent
+                                  , r"(, T =)"
+                                  , temporalExtent, r"(, $\invCoupling$=)"
+                                  , invCoupling))))
+dev.off()
+rm(Wt)
+```
+
+## fit Wloop
+
+```{r fitwloop}
+useSym <- TRUE
+
+wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".pdf"))
+
+fnSym <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x) + par[3] * exp(-par[2]*(temporalExtent/2 - x))
+fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
+
+fitRange <- c(18, 28)
+              
+pdf(paste0(plotPath, "fit_rsq_", rsq, ".pdf"))
+
+plotwitherror(x = c(1:wt$Time)
+                  , y = wt$cf.tsboot$t0
+                  , dy = wt$tsboot.se
+                  , log = "y"
+                  , xlab = "t"
+                  , ylab = paste0("W(r² = ", rsq ,", t)")
+                  , main = paste0("W(r² = ", rsq ,", t), L = ", spatialExtent, " , T = ", temporalExtent, ", invCoupling = ", invCoupling))
+
+START <- fitRange[1]
+END <- fitRange[2]
+
+x <- c(START:END)
+value <- wt$cf.tsboot$t0[START:END]
+bsamples <- wt$cf.tsboot$t[,START:END]
+
+if(useSym){
+  fit.result <- bootstrap.nlsfit(fnSym, c(0.7, 0.5, 0.01), value, x, bsamples)
+}else{
+  fit.result <- bootstrap.nlsfit(fn, c(0.7, 0.5), value, x, bsamples)
+}
+plot(fit.result, rep = TRUE, col.line = "black", col.band = "grey")
+
+A0 <- fit.result$t0[1]
+dA0 <- fit.result$se[1]
+if(useSym == TRUE){
+  B0 <- fit.result$t0[3]
+  dB0 <- fit.result$se[3]
+}
+mEff <- fit.result$t0[2]
+dmEff <- fit.result$se[2]
+chi2 <- fit.result$chisqr
+
+decimal_places <- function(x){
+  return (-floor(log10(x)))
+}
+
+formatted_mEff <- sprintf(paste0("%.", decimal_places(dmEff), "f"), mEff)
+formatted_dmEff <- sprintf("%.0f", dmEff * 10^(decimal_places(dmEff)))
+
+formatted_A0 <- sprintf(paste0("%.", decimal_places(dA0), "f"), A0)
+formatted_dA0 <- sprintf("%.0f", dA0 * 10^(decimal_places(dA0)))
+
+if(useSym){
+  formatted_B0 <- sprintf(paste0("%.", decimal_places(dB0), "f"), B0)
+  formatted_dB0 <- sprintf("%.0f", dB0 * 10^(decimal_places(dB0)))
+}
+if(useSym){
+  legend_text <- c( "f(t) == A[0] * e^{-E[0] * t} + B[0] * e^{ - E[0] * (T-t)}"
+                     , paste0("mEff == ", formatted_mEff, "(", formatted_dmEff, ")")
+                     , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
+                     , paste0("A[0] == ", formatted_A0, "(", formatted_dA0, ")")
+                     , paste0("B[0] == ", formatted_B0, "(", formatted_dB0, ")"))
+}else{
+  legend_text <- c( "f(t) == A[0] * e^{ - E[0] * t}"
+                      , paste0("mEff == ", formatted_mEff, "(", formatted_dmEff, ")")
+                      , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
+                      , paste0("A[0] == ", formatted_A0, "(", formatted_dA0, ")"))
+
+}
+legend("topright", legend = parse(text = legend_text))
+
+dev.off()
+
+saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,".rds"))
+
+summary(fit.result)
+```
