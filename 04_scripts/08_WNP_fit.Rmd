@@ -1,0 +1,139 @@
+---
+title: "analysis of non planar Wilson loops"
+output:
+  html_document: def
+---
+
+```{r}
+# load libraries
+library(hadron)
+library(latex2exp)
+
+# import functions
+source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
+
+# set parameters
+spatialExtent <- 3
+temporalExtent <- 32
+
+invCoupling <- 4
+
+extra <- 0
+
+bootSamples <- 1000
+blockSize <- 200
+
+betaPrecision <- sprintf("%.6f", invCoupling)
+
+inputFileName <- inputFileName(spatialExtent
+                                 , temporalExtent
+                                 , invCoupling
+                                 , extra = extra)
+dataFile <- dataFileNP(spatialExtent
+                       , temporalExtent
+                       , betaPrecision)
+
+dataPath <- dataPath(inputFileName)
+plotPath <- plotPath(inputFileName)
+writePath <- writePath(inputFileName)
+
+
+if (!dir.exists(plotPath)) {
+  dir.create(plotPath, recursive = TRUE)
+  cat("Directory created:", plotPath, "\n")
+}
+
+
+if (!dir.exists(writePath)) {
+  dir.create(writePath, recursive = TRUE)
+  cat("Directory created:", writePath, "\n")
+}
+```
+
+
+```{r}
+rsq <- 8
+
+fitRange <- c(8, 14)
+
+useSym <- FALSE
+
+wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
+
+#fnSym <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x) + par[3] * exp(-par[2]*(temporalExtent/2 - x))
+fnSym <- function(par, x, boot.r, ...) par[1] * cosh(par[2] * (par[3] - x))
+fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
+              
+if(useSym){
+  pdf(paste0(plotPath, "fit_rsq_", rsq,"_backprop.pdf"))
+}else{
+  pdf(paste0(plotPath, "fit_rsq_", rsq,"_linear.pdf"))
+}
+
+plotwitherror(x = c(1:wt$Time)
+                  , y = wt$cf.tsboot$t0
+                  , dy = wt$tsboot.se
+                  , log = "y"
+                  , xlab = "t"
+                  , ylab = paste0("W(r² = ", rsq ,", t)")
+                  , main = paste0("W(r² = ", rsq ,", t), L = ", spatialExtent, " , T = ", temporalExtent, ", invCoupling = ", invCoupling))
+
+START <- fitRange[1]
+END <- fitRange[2]
+
+x <- c(START:END)
+value <- wt$cf.tsboot$t0[START:END]
+bsamples <- wt$cf.tsboot$t[,START:END]
+
+if(useSym){
+  fit.result <- bootstrap.nlsfit(fnSym, c(0.15, 0.1, 30), value, x, bsamples, lower = c(0, 0, 0))
+}else{
+  fit.result <- bootstrap.nlsfit(fn, c(0.7, 0.5), value, x, bsamples)
+}
+plot(fit.result, rep = TRUE, col.line = "black", col.band = "grey")
+
+par1 <- fit.result$t0[1]
+dpar1 <- fit.result$se[1]
+
+par2 <- fit.result$t0[2]
+dpar2 <- fit.result$se[2]
+
+if(useSym == TRUE){
+  par3 <- fit.result$t0[3]
+  dpar3 <- fit.result$se[3]
+}
+
+chi2 <- fit.result$chisqr
+
+if(useSym){
+  legend_text <- c( "f(t) == A[0] * cosh(E[0](T[inv]-t))"
+                     , paste0("a[0] == ", par1, "(", dpar1, ")")
+                     , paste0("E[0] == ", par2, "(", dpar2, ")")
+                     , paste0("T[inv] == ", par3, "(", dpar3, ")")
+                     , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
+                     , paste0("p == ", fit.result$Qval))
+}else{
+  legend_text <- c( "f(t) == A[0] * e^{ - E[0] * t}"
+                      , paste0("E[0] == ", par2, "(", dpar2, ")")
+                      , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
+                      , paste0("p == ", fit.result$Qval)
+                      , paste0("A[0] == ", par1, "(", dpar1, ")"))
+
+}
+legend("topright", legend = parse(text = legend_text))
+
+dev.off()
+
+if(useSym){
+  saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_backprop.rds"))
+}else{
+    saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_linear.rds"))
+}
+
+summary(fit.result)
+```
+
+```{r}
+
+```
+

@@ -1,10 +1,10 @@
 ---
-title: "r2FWNP"
-output:
-  html_document:
-    df_print: paged
+title: "E0 and r2F for non linear Wilson loop, beta = 4, linear fit function, r = 1, sqrt(2)."
+output: html_document
 ---
-```{r parameters}
+Here are the parameters being used
+
+```{r}
 # load libraries
 library(hadron)
 library(latex2exp)
@@ -22,15 +22,16 @@ bootSamples <- 1000
 
 extra <- c(0, 0, 0, 0, 0, 0)
 
-rsq <- c(1, 5, 8)
+flag <- "backprop"
 
-fn <- function (par, x, boot.r, ...) par[1] +0 * x
+rsq <- c(1, 2, 4)
+
+fn <- function (par, x, boot.r, ...) par[1] * log(par[2] * x)
 ```
 
+Computing r2F
 
-##Computing r2F
-
-```{r}
+```{r echo = FALSE}
 g1Lst <- list()
 g2Lst <- list()
 
@@ -62,7 +63,7 @@ for (i in seq_along(spatialExtent)){
   bsV <- matrix(NA, nrow = bootSamples, ncol = length(rsq))
   
   for(j in seq_along(rsq)){
-    tmp <- readRDS(paste0(writePath, "wrtFitResults_rsq_", rsq[j],".rds"))
+    tmp <- readRDS(paste0(writePath, "wrtFitResults_rsq_", rsq[j],"_", flag, ".rds"))
     V[j] <- tmp$t0[[2]]
     bsV[,j] <- tmp$t[,2]
   }
@@ -86,7 +87,9 @@ rm(sublist)
 rm(tmp)
 ```
 
-```{r}
+Here is a plot of the ground state energy for r = 1
+
+```{r echo = FALSE}
 x <- spatialExtent
 
 value <- rep(NA, length(x))
@@ -100,12 +103,16 @@ for(i in seq_along(x)){
   bsamples[,i] <- VLst[[i]][[2]][,1]
 }
 
-fit.result <- bootstrap.nlsfit(fn, c(1,1), value, x, bsamples)
-summary(fit.result)
-plot(fit.result, main = paste0("E_0 for r=1 beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+plotwitherror(x, value, sd(bsamples), main = paste0("E_0 for r² = ", rsq[1], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+
+# fit.result <- bootstrap.nlsfit(fn, c(1,1,1), value, x, bsamples)
+# summary(fit.result)
+# plot(fit.result, main = paste0("E_0 for r² = ", rsq[1], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
 ```
 
-```{r}
+Here is a plot of the ground state energy for r = sqrt(2)
+
+```{r echo = FALSE}
 x <- spatialExtent
 
 value <- rep(NA, length(x))
@@ -119,14 +126,16 @@ for(i in seq_along(x)){
   bsamples[,i] <- VLst[[i]][[2]][,2]
 }
 
-fit.result <- bootstrap.nlsfit(fn, c(1,1), value, x, bsamples)
-summary(fit.result)
-plot(fit.result, main = paste0("E_0 for r=sqrt(5) beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+plotwitherror(x, value, dy = sd(bsamples, na.rm = TRUE), main = paste0("E_0 for r² = ", rsq[2], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+
+# fit.result <- bootstrap.nlsfit(fn, c(1,1,1), value, x, bsamples)
+# summary(fit.result)
+# plot(fit.result, main = paste0("E_0 for r² = ", rsq[2], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
 ```
 
+Here is a plot of the ground state energy for r = 2
 
-
-```{r}
+```{r echo = FALSE}
 x <- spatialExtent
 
 value <- rep(NA, length(x))
@@ -140,14 +149,16 @@ for(i in seq_along(x)){
   bsamples[,i] <- VLst[[i]][[2]][,3]
 }
 
-fit.result <- bootstrap.nlsfit(fn, c(1,1), value, x, bsamples)
-summary(fit.result)
-plot(fit.result, main = paste0("E_0 for r=sqrt(8) beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+plotwitherror(x, value, dy = sd(bsamples, na.rm = TRUE), main = paste0("E_0 for r² = ", rsq[3], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
+
+# fit.result <- bootstrap.nlsfit(fn, c(1,1), value, x, bsamples)
+# summary(fit.result)
+# plot(fit.result, main = paste0("E_0 for r² = ", rsq[3], " beta = ", invCoupling), xlab = "L/a", ylab = "E_0")
 ```
 
+Here is a plot of the running coupling r^2F(r,g) for r = 1
 
-
-```{r}
+```{r echo = FALSE}
 x <- spatialExtent
 
 value <- rep(NA, length(x))
@@ -164,12 +175,14 @@ for(i in seq_along(x)){
 value <- unlist(value)
 bsamples <- as.matrix(bsamples, nrow = boot.R, ncol = length(x))
 
-fit.result <- bootstrap.nlsfit(fn, c(0.3,1), value, x, bsamples)
-summary(fit.result)
-plot(fit.result, main = paste0("r2F(r,beta) for r=1 beta =", invCoupling), xlab = "L/a", ylab = "r2F")
+plotwitherror(x, value, dy = sd(bsamples, na.rm = TRUE), main = paste0("r2F(r,beta) for r² = ", rsq[1], " beta =", invCoupling), xlab = "L/a", ylab = "r2F")
+
+# fit.result <- bootstrap.nlsfit(fn, c(0.3,1), value, x, bsamples)
+# summary(fit.result)
+# plot(fit.result, main = paste0("r2F(r,beta) for r² = ", rsq[1], " beta =", invCoupling), xlab = "L/a", ylab = "r2F")
 ```
 
-
+Here is a plot of the running coupling r^2F(r,g) for r = sqrt(2)
 
 ```{r}
 x <- spatialExtent
@@ -188,7 +201,14 @@ for(i in seq_along(x)){
 value <- unlist(value)
 bsamples <- as.matrix(bsamples, nrow = boot.R, ncol = length(x))
 
-fit.result <- bootstrap.nlsfit(fn, c(0.3,1), value, x, bsamples)
-summary(fit.result)
-plot(fit.result, main = paste0("r2F(r,beta) for r=sqrt(5) beta =", invCoupling), xlab = "L/a", ylab = "r2F")
+plotwitherror(x, value, dy = sd(bsamples, na.rm = TRUE), main = paste0("r2F(r,beta) for r² = ", rsq[2], " beta =", invCoupling), xlab = "L/a", ylab = "r2F")
+ 
+# fit.result <- bootstrap.nlsfit(fn, c(0.3,1), value, x, bsamples)
+# summary(fit.result)
+# plot(fit.result, main = paste0("r2F(r,beta) for r² = ", rsq[2], " beta =", invCoupling), xlab = "L/a", ylab = "r2F")
 ```
+```{r echo = FALSE}
+# rmarkdown::render("/home/negro/projects/stepscaling/RU1/04_scripts/10_E0_r2F_visualization_fit.Rmd", output_file = paste0("/home/negro/projects/stepscaling/RU1/02_output/plots/stepScalingPlots/", flag,"_E0_r2F_b", invCoupling,"_rsq", rsq[1],"_" ,rsq[2],".html"))
+
+```
+

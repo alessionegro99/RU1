@@ -1,0 +1,240 @@
+---
+title: "analysis of non planar Wilson loops"
+output:
+  html_document: def
+---
+```{r}
+# load libraries
+library(hadron)
+library(latex2exp)
+
+# import functions
+source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
+
+# set parameters
+spatialExtentArr <- c(8) 
+temporalExtent <- 32
+
+invCoupling <- 4 
+
+extra <- 0
+
+typesolve <- "acosh"
+
+rsqArr <- c(1, 2, 4, 5, 8)
+
+skipRead <- 250
+thermSkip <- 0
+bootSamples <- 1000
+blockSizeAnalysis <- 2
+blockSize <- 200
+
+t_0ind <- 4
+```
+
+## Extraction of non planar Wilson loops
+
+```{r results = 'hide', message = FALSE}
+for (spatialExtent in spatialExtentArr){
+  for(rsq in rsqArr){
+    source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
+    betaPrecision <- sprintf("%.6f", invCoupling)
+    
+    inputFileName <- inputFileName(spatialExtent
+                                     , temporalExtent
+                                     , invCoupling
+                                     , extra = extra)
+    dataFile <- dataFileNP(spatialExtent
+                           , temporalExtent
+                           , betaPrecision)
+    
+    dataPath <- dataPath(inputFileName)
+    plotPath <- plotPath(inputFileName)
+    writePath <- writePath(inputFileName)
+    
+    
+    if (!dir.exists(plotPath)) {
+      dir.create(plotPath, recursive = TRUE)
+      cat("Directory created:", plotPath, "\n")
+    }
+    
+    
+    if (!dir.exists(writePath)) {
+      dir.create(writePath, recursive = TRUE)
+      cat("Directory created:", writePath, "\n")
+    }  
+    nComb <- count_sum_of_squares_with_duplicates(rsq)
+    
+    cfWloopNP <- wLoopToCfNP(dataPath
+                      , dataFile
+                      , spatialExtent
+                      , temporalExtent
+                      , rsq = rsq
+                      , skip = skipRead)
+    
+    t <- t_0ind + nComb + 1
+    
+    timeSeries <- cfWloopNP$cf[, t]
+    
+    pdf(paste0(plotPath, "thermalization_rsq_", rsq, ".pdf"))
+    plot(timeSeries
+         , xlab = TeX(r"($n_{configs}$)")
+         , ylab = TeX(r"($\langle\textit{W}(r,t)\rangle$)")
+         , main = TeX(sprintf(paste(r"(MC history of W( r² =)"
+                              , rsq
+                              , r"(, t =)"
+                              , t
+                              , r"(), L =)"
+                              , spatialExtent
+                              , r"(, T =)"
+                              , temporalExtent
+                              , r"(, $\invCoupling$ =)"
+                              , invCoupling))))
+    dev.off()
+    
+    # data <- data.frame(
+    #   x = c(1:length(timeSeries)),
+    #   y = timeSeries)
+    # fit <- lm(y ~ x, data = data)
+    # coef(fit)
+    
+    cfThermTmp <- cfWloopNP$cf[-(1:thermSkip),]
+    
+    nrow <- dim(cfThermTmp)[1]
+    ncol <- dim(cfThermTmp)[2]
+    
+    cfTherm <- matrix(NA, nrow = nrow * nComb, ncol = ncol / nComb)
+    
+    for(i in seq(1,ncol/nComb)){
+      for(j in seq(1,nComb)){
+        cfTherm[(1 + nrow*(j-1)):(nrow*j), i] <- cfThermTmp[, (i-1) * nComb + j]
+      }
+    }
+    
+    cfWloopNP$cf <- cfTherm
+    
+    rm(cfTherm, cfThermTmp)
+    
+    
+    t <- t_0ind + 1
+    
+    timeSeries <- cfWloopNP$cf[, t]
+    
+    pdf(paste0(plotPath, "bootstrapAnalysis_rsq_", rsq, ".pdf"))
+    bootstrap.analysis(timeSeries
+                       , skip = thermSkip
+                       , boot.R = bootSamples
+                       , boot.l = blockSizeAnalysis
+                       , pl = TRUE)
+    title(main = TeX(sprintf(paste(r"(Bootstrap error for W( r² =)"
+                             , rsq
+                             , r"(, t =)"
+                             , t
+                             , r"(), r = )", spatialExtent, r"(, T =)"
+                             , temporalExtent, r"(, $\invCoupling$ =)"
+                             , invCoupling))))
+    dev.off()
+    
+    Wt <- cfWloopNP
+    Wt$cf <- Wt$cf[, -1]
+    Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
+    saveRDS(Wt, paste0(writePath, "wrt_rsq", rsq, ".rds"))
+    rm(Wt)
+    
+    Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
+    
+    pdf(paste0(plotPath, "wilsonloop_NP_rsq_", rsq, ".pdf"))
+    plot(Wt,
+         xlim = c(24,32),
+         ylim = c(.06,0.1),         
+         xlab = TeX(r"($t$)"),
+         ylab = TeX(r"($W_r(t)$)"),
+         main = TeX(sprintf(paste(r"($W_r$(t))"
+                                      , r"(, r =)"
+                                      , rsq
+                                      , r"(, L =)"
+                                      , spatialExtent
+                                      , r"(, T =)"
+                                      , temporalExtent
+                                      , r"(, $\invCoupling$ =)"
+                                      , invCoupling))))
+    
+    # expecting exponential decrease, plotting in logscale
+    plot(Wt,
+         log = "y",
+         xlab = TeX(r"($t$)"),
+         ylab = TeX(r"($W_r(t)$)"),
+         main = TeX(sprintf(paste(r"(logscale, $W_r$(t))"
+                                      , r"(, r =)"
+                                      , rsq
+                                      , r"(, L =)"
+                                      , spatialExtent
+                                      , r"(, T =)"
+                                      , temporalExtent, r"(, $\invCoupling$=)"
+                                      , invCoupling))))
+    dev.off()
+    #rm(Wt)
+  }
+}
+```
+
+
+```{r}
+for (spatialExtent in spatialExtentArr){
+  for(rsq in rsqArr){
+    source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
+    
+    betaPrecision <- sprintf("%.6f", invCoupling)
+    
+    inputFileName <- inputFileName(spatialExtent
+                                     , temporalExtent
+                                     , invCoupling
+                                     , extra = extra)
+    dataFile <- dataFileNP(spatialExtent
+                           , temporalExtent
+                           , betaPrecision)
+    
+    dataPath <- dataPath(inputFileName)
+    plotPath <- plotPath(inputFileName)
+    writePath <- writePath(inputFileName)
+    
+    
+    if (!dir.exists(plotPath)) {
+      dir.create(plotPath, recursive = TRUE)
+      cat("Directory created:", plotPath, "\n")
+    }
+    
+    
+    if (!dir.exists(writePath)) {
+      dir.create(writePath, recursive = TRUE)
+      cat("Directory created:", writePath, "\n")
+    }  
+    
+    Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
+    
+    effectiveMass <- bootstrap.effectivemass(Wt, type = typesolve)
+    
+    saveRDS(effectiveMass, paste0(writePath, "/mEff_rsq_", rsq, "_", typesolve, ".rds"))
+    
+    pdf(paste0(plotPath, "effectiveMass_rsq_", rsq, "_type_", typesolve,".pdf"))
+    plot(effectiveMass,
+         xlab = TeX(r"($t$)"),
+         ylab = TeX(r"($effmass_r(t)$)"),
+         main = TeX(sprintf(paste(r"($m_{eff}$(t))"
+                                      , r"(, rsq =)"
+                                      , rsq
+                                      , r"(, L =)"
+                                      , spatialExtent
+                                      , r"(, T =)"
+                                      , temporalExtent
+                                      , r"(, $\invCoupling$ =)"
+                                      , invCoupling
+                                      , r"(, $type$ =)"
+                                      , typesolve))))
+    dev.off()
+    #rm(Wt)
+    # rm(effectiveMass)
+  }
+}
+```
+

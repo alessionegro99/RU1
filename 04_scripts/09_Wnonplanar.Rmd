@@ -1,10 +1,9 @@
 ---
-title: "Non planar Wilson loops"
+title: "analysis of non planar Wilson loops"
 output:
-  pdf_document: def
   html_document: def
 ---
-```{r parameters}
+```{r}
 # load libraries
 library(hadron)
 library(latex2exp)
@@ -20,13 +19,13 @@ invCoupling <- 4
 
 extra <- 0
 
-rsq <- 8
+rsq <- c(1,2,4,5,8)
 
 skipRead <- 250
 thermSkip <- 0
 bootSamples <- 1000
 blockSizeAnalysis <- 2
-blockSize <- 25
+blockSize <- 20
 
 t_0ind <- 4
 
@@ -61,7 +60,7 @@ if (!dir.exists(writePath)) {
 
 ## Extraction of non planar Wilson loops
 
-```{r WloopExtraction}
+```{r}
 cfWloopNP <- wLoopToCfNP(dataPath
                   , dataFile
                   , spatialExtent
@@ -76,8 +75,6 @@ cfWloopNP <- wLoopToCfNP(dataPath
 t <- t_0ind + nComb +1
 
 timeSeries <- cfWloopNP$cf[, t]
-
-
 
 pdf(paste0(plotPath, "thermalization_rsq_", rsq, ".pdf"))
 plot(timeSeries
@@ -153,14 +150,14 @@ dev.off()
 Wt <- cfWloopNP
 Wt$cf <- Wt$cf[, -1]
 Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
-saveRDS(Wt, paste0(writePath, "wrt_rsq", rsq, ".pdf"))
+saveRDS(Wt, paste0(writePath, "wrt_rsq", rsq, ".rds"))
 rm(Wt)
 ```
 
 ## plot Wloop 
 
 ```{r}
-Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".pdf"))
+Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
 
 pdf(paste0(plotPath, "wilsonloop_NP_rsq_", rsq, ".pdf"))
 plot(Wt,
@@ -195,18 +192,24 @@ rm(Wt)
 
 ## fit Wloop
 
-```{r fitwloop}
+```{r}
+
 useSym <- TRUE
 
-wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".pdf"))
 
-fnSym <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x) + par[3] * exp(-par[2]*(temporalExtent/2 - x))
+wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
+
+#fnSym <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x) + par[3] * exp(-par[2]*(temporalExtent/2 - x))
+fnSym <- function(par, x, boot.r, ...) par[1] * cosh(par[2] * (par[3] - x))
 fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
 
-fitRange <- c(18, 28)
-              
-pdf(paste0(plotPath, "fit_rsq_", rsq, ".pdf"))
+fitRange <- c(18, 30)
 
+if(useSym){
+  pdf(paste0(plotPath, "fit_rsq_", rsq,"_backprop.pdf"))
+}else{
+  pdf(paste0(plotPath, "fit_rsq_", rsq,"_linear.pdf"))
+}
 plotwitherror(x = c(1:wt$Time)
                   , y = wt$cf.tsboot$t0
                   , dy = wt$tsboot.se
@@ -223,54 +226,56 @@ value <- wt$cf.tsboot$t0[START:END]
 bsamples <- wt$cf.tsboot$t[,START:END]
 
 if(useSym){
-  fit.result <- bootstrap.nlsfit(fnSym, c(0.7, 0.5, 0.01), value, x, bsamples)
+  fit.result <- bootstrap.nlsfit(fnSym, c(0.1, 0.05, 10), value, x, bsamples)
 }else{
   fit.result <- bootstrap.nlsfit(fn, c(0.7, 0.5), value, x, bsamples)
 }
 plot(fit.result, rep = TRUE, col.line = "black", col.band = "grey")
 
-A0 <- fit.result$t0[1]
-dA0 <- fit.result$se[1]
+par1 <- fit.result$t0[1]
+dpar1 <- fit.result$se[1]
+
+par2 <- fit.result$t0[2]
+dpar2 <- fit.result$se[2]
+
 if(useSym == TRUE){
-  B0 <- fit.result$t0[3]
-  dB0 <- fit.result$se[3]
+  par3 <- fit.result$t0[3]
+  dpar3 <- fit.result$se[3]
 }
-mEff <- fit.result$t0[2]
-dmEff <- fit.result$se[2]
+
 chi2 <- fit.result$chisqr
 
-decimal_places <- function(x){
-  return (-floor(log10(x)))
-}
-
-formatted_mEff <- sprintf(paste0("%.", decimal_places(dmEff), "f"), mEff)
-formatted_dmEff <- sprintf("%.0f", dmEff * 10^(decimal_places(dmEff)))
-
-formatted_A0 <- sprintf(paste0("%.", decimal_places(dA0), "f"), A0)
-formatted_dA0 <- sprintf("%.0f", dA0 * 10^(decimal_places(dA0)))
-
 if(useSym){
-  formatted_B0 <- sprintf(paste0("%.", decimal_places(dB0), "f"), B0)
-  formatted_dB0 <- sprintf("%.0f", dB0 * 10^(decimal_places(dB0)))
-}
-if(useSym){
-  legend_text <- c( "f(t) == A[0] * e^{-E[0] * t} + B[0] * e^{ - E[0] * (T-t)}"
-                     , paste0("mEff == ", formatted_mEff, "(", formatted_dmEff, ")")
+  legend_text <- c( "f(t) == A[0] * cosh(E[0](T[inv]-t))"
+                     , paste0("a[0] == ", par1, "(", dpar1, ")")
+                     , paste0("E[0] == ", par2, "(", dpar2, ")")
+                     , paste0("T[inv] == ", par3, "(", dpar3, ")")
                      , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
-                     , paste0("A[0] == ", formatted_A0, "(", formatted_dA0, ")")
-                     , paste0("B[0] == ", formatted_B0, "(", formatted_dB0, ")"))
+                     , paste0("p == ", fit.result$Qval))
 }else{
   legend_text <- c( "f(t) == A[0] * e^{ - E[0] * t}"
-                      , paste0("mEff == ", formatted_mEff, "(", formatted_dmEff, ")")
+                      , paste0("E[0] == ", par2, "(", dpar2, ")")
                       , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
-                      , paste0("A[0] == ", formatted_A0, "(", formatted_dA0, ")"))
+                      , paste0("p == ", fit.result$Qval)
+                      , paste0("A[0] == ", par1, "(", dpar1, ")"))
 
 }
 legend("topright", legend = parse(text = legend_text))
 
 dev.off()
 
-saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,".rds"))
+if(useSym){
+  saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_backprop.rds"))
+}else{
+    saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_linear.rds"))
+}
 
 summary(fit.result)
 ```
+
+## Effective mass plateau and fit
+
+```{r}
+
+```
+
