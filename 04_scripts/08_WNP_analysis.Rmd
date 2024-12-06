@@ -12,10 +12,10 @@ library(latex2exp)
 source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
 
 # set parameters
-spatialExtentArr <- c(8) 
+spatialExtentArr <- c(3, 4, 5, 6, 7) 
 temporalExtent <- 32
 
-invCoupling <- 4 
+invCoupling <- 1.4 
 
 extra <- 0
 
@@ -23,11 +23,11 @@ typesolve <- "acosh"
 
 rsqArr <- c(1, 2, 4, 5, 8)
 
-skipRead <- 250
+skipRead <- 20000
 thermSkip <- 0
 bootSamples <- 1000
-blockSizeAnalysis <- 2
-blockSize <- 200
+blockSizeAnalysis <- 250
+blockSize <- 2000
 
 t_0ind <- 4
 ```
@@ -136,6 +136,7 @@ for (spatialExtent in spatialExtentArr){
     dev.off()
     
     Wt <- cfWloopNP
+    rm(cfWloopNP)
     Wt$cf <- Wt$cf[, -1]
     Wt <- bootstrap.cf(Wt, boot.R = bootSamples, boot.l = blockSize)
     saveRDS(Wt, paste0(writePath, "wrt_rsq", rsq, ".rds"))
@@ -144,9 +145,7 @@ for (spatialExtent in spatialExtentArr){
     Wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
     
     pdf(paste0(plotPath, "wilsonloop_NP_rsq_", rsq, ".pdf"))
-    plot(Wt,
-         xlim = c(24,32),
-         ylim = c(.06,0.1),         
+    plot(Wt,         
          xlab = TeX(r"($t$)"),
          ylab = TeX(r"($W_r(t)$)"),
          main = TeX(sprintf(paste(r"($W_r$(t))"
@@ -173,13 +172,13 @@ for (spatialExtent in spatialExtentArr){
                                       , temporalExtent, r"(, $\invCoupling$=)"
                                       , invCoupling))))
     dev.off()
-    #rm(Wt)
+    rm(Wt)
   }
 }
 ```
 
 
-```{r}
+```{r results = 'hide', message = FALSE}
 for (spatialExtent in spatialExtentArr){
   for(rsq in rsqArr){
     source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
@@ -218,6 +217,7 @@ for (spatialExtent in spatialExtentArr){
     
     pdf(paste0(plotPath, "effectiveMass_rsq_", rsq, "_type_", typesolve,".pdf"))
     plot(effectiveMass,
+         ylim = c(0.38,0.42),
          xlab = TeX(r"($t$)"),
          ylab = TeX(r"($effmass_r(t)$)"),
          main = TeX(sprintf(paste(r"($m_{eff}$(t))"
@@ -232,8 +232,8 @@ for (spatialExtent in spatialExtentArr){
                                       , r"(, $type$ =)"
                                       , typesolve))))
     dev.off()
-    #rm(Wt)
-    # rm(effectiveMass)
+    rm(Wt)
+    rm(effectiveMass)
   }
 }
 ```
