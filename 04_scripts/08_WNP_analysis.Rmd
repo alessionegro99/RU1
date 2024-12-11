@@ -12,22 +12,22 @@ library(latex2exp)
 source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
 
 # set parameters
-spatialExtentArr <- c(3, 4, 5, 6, 7) 
+spatialExtentArr <- c(3) 
 temporalExtent <- 32
 
-invCoupling <- 1.4 
+invCoupling <- 100 
 
 extra <- 0
 
 typesolve <- "acosh"
 
-rsqArr <- c(1, 2, 4, 5, 8)
+rsqArr <- c(1, 2, 4, 5, 8, 9)
 
-skipRead <- 20000
+skipRead <- 500
 thermSkip <- 0
 bootSamples <- 1000
-blockSizeAnalysis <- 250
-blockSize <- 2000
+blockSizeAnalysis <- 2
+blockSize <- 200
 
 t_0ind <- 4
 ```
@@ -181,6 +181,7 @@ for (spatialExtent in spatialExtentArr){
 ```{r results = 'hide', message = FALSE}
 for (spatialExtent in spatialExtentArr){
   for(rsq in rsqArr){
+  
     source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
     
     betaPrecision <- sprintf("%.6f", invCoupling)
@@ -217,7 +218,6 @@ for (spatialExtent in spatialExtentArr){
     
     pdf(paste0(plotPath, "effectiveMass_rsq_", rsq, "_type_", typesolve,".pdf"))
     plot(effectiveMass,
-         ylim = c(0.38,0.42),
          xlab = TeX(r"($t$)"),
          ylab = TeX(r"($effmass_r(t)$)"),
          main = TeX(sprintf(paste(r"($m_{eff}$(t))"
@@ -237,4 +237,3 @@ for (spatialExtent in spatialExtentArr){
   }
 }
 ```
-

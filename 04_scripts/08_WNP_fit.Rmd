@@ -16,7 +16,7 @@ source("~/projects/stepscaling/RU1/03_functions/myFunctions.R")
 spatialExtent <- 3
 temporalExtent <- 32
 
-invCoupling <- 4
+invCoupling <- 1.4
 
 extra <- 0
 
@@ -52,19 +52,25 @@ if (!dir.exists(writePath)) {
 
 
 ```{r}
-rsq <- 8
+rsq <- 5
 
-fitRange <- c(8, 14)
+fitRange <- c(6, 10)
 
 useSym <- FALSE
+useSym2 <- TRUE
 
 wt <- readRDS(paste0(writePath, "wrt_rsq", rsq, ".rds"))
 
+print(wt$cf0)
+
 #fnSym <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x) + par[3] * exp(-par[2]*(temporalExtent/2 - x))
-fnSym <- function(par, x, boot.r, ...) par[1] * cosh(par[2] * (par[3] - x))
+fnSym <- function(par, x, boot.r, ...) par[1] * cosh(par[2] * (par[1] - x))
+fnSym2 <- function(par, x, boot.r, ...) cosh(par[2]*(par[1]/2 - x))/cosh(par[2]*par[1]/2)#(par[1]) * exp( - par[2] * x) + (1 - par[1]) * exp( + par[2] * x)
 fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
-              
-if(useSym){
+
+if(useSym2){
+  pdf(paste0(plotPath, "fit_rsq_", rsq,"_backprop_constrained.pdf"))
+}else if(useSym){
   pdf(paste0(plotPath, "fit_rsq_", rsq,"_backprop.pdf"))
 }else{
   pdf(paste0(plotPath, "fit_rsq_", rsq,"_linear.pdf"))
@@ -85,7 +91,9 @@ x <- c(START:END)
 value <- wt$cf.tsboot$t0[START:END]
 bsamples <- wt$cf.tsboot$t[,START:END]
 
-if(useSym){
+if(useSym2){
+  fit.result <- bootstrap.nlsfit(fnSym2, c(0.5, 0.1), value, x, bsamples, lower = c(0, 0))
+}else if(useSym){
   fit.result <- bootstrap.nlsfit(fnSym, c(0.15, 0.1, 30), value, x, bsamples, lower = c(0, 0, 0))
 }else{
   fit.result <- bootstrap.nlsfit(fn, c(0.7, 0.5), value, x, bsamples)
@@ -105,8 +113,14 @@ if(useSym == TRUE){
 
 chi2 <- fit.result$chisqr
 
-if(useSym){
-  legend_text <- c( "f(t) == A[0] * cosh(E[0](T[inv]-t))"
+if(useSym2){
+  legend_text <- c( "f(t) == a(r) * exp(-E[0] * t) + (1 - a(r)) * exp(E[0] * t)"
+                     , paste0("E[0] == ", par2, "(", dpar2, ")")
+                     , paste0("a(r) == ", par1, "(", dpar1, ")")
+                     , paste0("chi[red]^{2} == ", chi2/fit.result$dof)
+                     , paste0("p == ", fit.result$Qval))
+}else if(useSym){
+  legend_text <- c( "f(t) == a[0] * cosh(E[0](T[inv]-t))"
                      , paste0("a[0] == ", par1, "(", dpar1, ")")
                      , paste0("E[0] == ", par2, "(", dpar2, ")")
                      , paste0("T[inv] == ", par3, "(", dpar3, ")")
@@ -125,6 +139,8 @@ legend("topright", legend = parse(text = legend_text))
 dev.off()
 
 if(useSym){
+  saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_backprop_constrained.rds"))
+}else if(useSym){
   saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_backprop.rds"))
 }else{
     saveRDS(fit.result, paste0(writePath, "wrtFitResults_rsq_", rsq,"_linear.rds"))
@@ -134,6 +150,17 @@ summary(fit.result)
 ```
 
 ```{r}
+wt1 <- readRDS(paste0(writePath, "wrt_rsq", 1, ".rds"))
+wt2 <- readRDS(paste0(writePath, "wrt_rsq", 4, ".rds"))
+wt3 <- readRDS(paste0(writePath, "wrt_rsq", 9, ".rds"))
 
+
+wtcomb <- c(wt1$cf0, rev(wt2$cf0))
+
+plot(wtcomb)
+
+t <- 1
+wt1$cf0[t] / wt2$cf0[t] - wt3$cf0[temporalExtent - t]
+sd(wt1$cf[,t] / wt2$cf[,t] - wt3$cf[,temporalExtent - t])  
 ```
 
