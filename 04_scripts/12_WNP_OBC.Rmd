@@ -6,16 +6,19 @@ output:
 Loading parameters and libraries.
 
 ```{r}
-# load libraries
 library(hadron)
+```
 
+Initial parameters
+
+```{r}
 boot.l = 500
 boot.R = 500
 therm = 500
 
 temporal_extent <- 32
-spatial_extent <- 3
-inv_coupling <- 50
+spatial_extent <- 5
+inv_coupling <- 100
 
 if(spatial_extent == 3)
   r_i <- c(1, sqrt(2), 2, sqrt(5), sqrt(8))
@@ -112,14 +115,24 @@ for(i in seq_along(r_i)){
 Effective mass
 
 ```{r, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+if(!exists("W"))
+{
+  W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
+}
 pdf(paste0(plots, folder, "/EMASS.pdf"))
-lims <- rep(list(c(0,0.1)), length(r_i))
-lims <- list(c(0.015, 0.017), c(0.0145, 0.018), c(0.0199, 0.021), c(0.019, 0.021), c(0.0225, 0.03))
+
+lims1 <- rep(list(c(0.008, 0.015)), length(r_i)%/%2)
+lims2 <- rep(list(c(0.012, 0.02)), length(r_i)%/%2+1)
+lims <- c(lims1, lims2)
+
+#lims <- list(c(0.035, 0.042), c(0.04, 0.06), c(0.05, 0.07), c(0.05, 0.07), c(0.06, 0.08), c(0.065, 0.085), c(0.085, 0.12))
+
 for(i in seq_along(r_i)){
   e_mass <- bootstrap.effectivemass(W[[i]], type = "log")
   plot(e_mass, main = paste0("Effectiva mass for r = ", r_i[i]), ylab = expression(m[eff]), xlab = "t", xlim = c(0,24), ylim = lims[[i]])
   grid()
 }
+
 dev.off()
 ```
 Fit stuff
@@ -128,8 +141,9 @@ Fit stuff
 if(!exists("W")){
 W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
 }
-range <- seq(1,temporal_extent-1)
-mask <- list(seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16))
+range <- seq(1,temporal_extent-1) #????
+
+mask <- list(seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16))
 
 fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
 ```
@@ -196,391 +210,9 @@ for(i in seq_along(r_i)){
 }
 dev.off()
 ```
-computing r2F
-
-```{r echo = FALSE}
-g1Lst <- list()
-g2Lst <- list()
-
-VLst <- list()
-
-temporal_extent <- 32
-inv_coupling <- 1.4
-spatial_extent_array <- c(3, 4, 5)
-boot.R = 500
-r_i <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18), 5, sqrt(32))
-extra = "_0"
-
-rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/"
-datas <- "/home/negro/projects/matching/RU1/02_output/data/"
-plots_SS <- "/home/negro/projects/matching/RU1/02_output/plots/stepScalingPlots/"
-
-for (i in seq_along(spatial_extent_array)){
-  folder <- paste0("pascal_OBC_", inv_coupling, "_", spatial_extent_array[i], "_", temporal_extent, extra)
-
-  V <- rep(NA, length(r_i))
-  bsV_3 <- matrix(NA, nrow = boot.R, ncol = length(r_i))
-  dV <- rep(NA, length(r_i))
-  
-  for(j in seq_along(r_i)){
-    tmp <- readRDS(paste0(datas, folder, "/fit.result_correlated_", j,".rds"))
-    V[j] <- tmp$t0[[2]]
-    bsV[,j] <- tmp$t[,2]
-    dV[j] <- tmp$se[[2]]
-  }
-  
-  g1 <- r_i[1]*r_i[1]*(V[2]-V[1])/(r_i[2]-r_i[1])
-  g2 <- r_i[2]*r_i[2]*(V[3]-V[2])/(r_i[3]-r_i[2])
-  
-  bsg1 <- r_i[1]*r_i[1]*(bsV[,2]-bsV[,1])/(r_i[2] - r_i[1])
-  bsg2 <- r_i[2]*r_i[2]*(bsV[,3]-bsV[,2])/(r_i[3] - r_i[2])
-  
-  sublist <- list(V, bsV, dV)
-  VLst[[i]] <- sublist
-  
-  sublist <- list(g1, bsg1)
-  g1Lst[[i]] <- sublist 
-  
-  sublist <- list(g2, bsg2)
-  g2Lst[[i]] <- sublist
-}
-rm(sublist)
-rm(tmp)
-
-dir.create(paste0(plots, "/stepScalingPlots/E0_r2F_b", inv_coupling,"_OBC", extra))
-```
-
-Here is a plot of the ground state energy for r = 1
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-dvalue <- rep(NA, length(x))
-
-for(i in seq_along(x)){
-  value[i] <- VLst[[i]][[1]][1]
-  bsamples[,i] <- VLst[[i]][[2]][,1]
-  dvalue[i] <- VLst[[i]][[3]][1]
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/E0_1.pdf"))
-plotwitherror(x, value, dvalue, main = paste0("E_0 for r = ", r_i[1], " beta = ", inv_coupling), xlab = "L/a", ylab = "E_0")
-dev.off()
-print(apply(bsamples, 2, sd))
-print(dvalue)
-```
-
-Here is a plot of the ground state energy for r = sqrt(2)
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-dvalue <- rep(NA, length(x))
-
-for(i in seq_along(x)){
-  value[i] <- VLst[[i]][[1]][2]
-  bsamples[,i] <- VLst[[i]][[2]][,2]
-  dvalue[i] <- VLst[[i]][[3]][2]
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/E0_sqrt2.pdf"))
-plotwitherror(x, value, dvalue, main = paste0("E_0 for r = ", r_i[2], " beta = ", inv_coupling), xlab = "L/a", ylab = "E_0")
-dev.off()
-```
-
-Plot of the ground state energy for r = 2
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-dvalue <- rep(NA, length(x))
-
-for(i in seq_along(x)){
-  value[i] <- VLst[[i]][[1]][3]
-  bsamples[,i] <- VLst[[i]][[2]][,3]
-  dvalue[i] <- VLst[[i]][[3]][3]
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/E0_2.pdf"))
-plotwitherror(x, value, dvalue, main = paste0("E_0 for r = ", r_i[3], " beta = ", inv_coupling), xlab = "L/a", ylab = "E_0")
-dev.off()
-```
-Plot of the ground state energy for r = sqrt(5)
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-dvalue <- rep(NA, length(x))
-
-for(i in seq_along(x)){
-  value[i] <- VLst[[i]][[1]][4]
-  bsamples[,i] <- VLst[[i]][[2]][,4]
-  dvalue[i] <- VLst[[i]][[3]][4]
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/E0_sqrt5.pdf"))
-plotwitherror(x, value, dvalue, main = paste0("E_0 for r = ", r_i[4], " beta = ", inv_coupling), xlab = "L/a", ylab = "E_0")
-dev.off()
-```
-
-Here is a plot of the running coupling r^2F(r,g) for r = 1
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-
-for(i in seq_along(x)){
-  value[i] <- as.numeric(g1Lst[[i]][1])
-  bsamples[,i] <- unlist(g1Lst[[i]][2])
-}
-
-value <- unlist(value)
-bsamples <- as.matrix(bsamples, nrow = boot.R, ncol = length(x))
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/r2F_1.pdf"))
-plotwitherror(x, value, apply(bsamples, 2, sd), main = paste0("g(r,beta) for r = ", r_i[1], " beta = ", inv_coupling), xlab = "L/a", ylab = "g(r1,beta)")
-dev.off()
-```
-
-Here is a plot of the running coupling r^2F(r,g) for r = sqrt2
-
-```{r echo = FALSE}
-x <- spatial_extent_array
-
-value <- rep(NA, length(x))
-
-bsamples <- matrix(NA, nrow = boot.R, ncol = length(x))
-
-for(i in seq_along(x)){
-  value[i] <- as.numeric(g2Lst[[i]][1])
-  bsamples[,i] <- unlist(g2Lst[[i]][2])
-}
-
-value <- unlist(value)
-bsamples <- as.matrix(bsamples, nrow = boot.R, ncol = length(x))
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/r2F_sqrt2.pdf"))
-plotwitherror(x, value, apply(bsamples, 2, sd), main = paste0("g(r,beta) for r = ", r_i[2], " beta = ", inv_coupling), xlab = "L/a", ylab = "g(r2,beta)")
-dev.off()
-```
-
-plot for E0(r) at fixed L
-
 ```{r}
-x <- c(3, 4, 5)
-
-value1 <- rep(NA, length(x))
-value2 <- rep(NA, length(x))
-value3 <- rep(NA, length(x))
-
-bsamples1 <- matrix(NA, nrow = boot.R, ncol = length(x))
-bsamples2 <- matrix(NA, nrow = boot.R, ncol = length(x))
-bsamples3 <- matrix(NA, nrow = boot.R, ncol = length(x))
-
-for(i in seq_along(x)){
-  value1[i] <- VLst[[i]][[1]][1]
-  bsamples1[,i] <- VLst[[i]][[2]][,1]
-  value2[i] <- VLst[[i]][[1]][2]
-  bsamples2[,i] <- VLst[[i]][[2]][,2]
-  value3[i] <- VLst[[i]][[1]][3]
-  bsamples3[,i] <- VLst[[i]][[2]][,3]
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/E0_vs_r.pdf"))
-  plotwitherror(x, value1, apply(bsamples1, 2, sd), col = "red", ylim = c(0.45, 0.95), ylab = "E_0", xlab = "L/a", main = "E_0(L) for different distances r", cex = 1.2)
-  plotwitherror(x, value2, apply(bsamples2, 2, sd), col = "blue", rep = TRUE,  cex = 1.2)
-  plotwitherror(x, value3, apply(bsamples3, 2, sd), col = "green", rep = TRUE,  cex = 1.2)
-  legend(x = "topright", legend = c("r=1", "r=sqrt(2)", "r=sqrt(5)"), pch = 1, cex = 1.2, col = c("red", "blue", "green"))
-dev.off()
+rm(list = ls())
 ```
 
-Plotting r2F vs r at fixed L
 
-```{r}
-x <- c(3, 4, 5)
-
-value1 <- rep(NA, length(x))
-value2 <- rep(NA, length(x))
-
-bsamples1 <- matrix(NA, nrow = boot.R, ncol = length(x))
-bsamples2 <- matrix(NA, nrow = boot.R, ncol = length(x))
-
-for(i in seq_along(x)){
-  value1[i] <- as.numeric(g1Lst[[i]][1])
-  bsamples1[,i] <- unlist(g1Lst[[i]][2])
-  value2[i] <- as.numeric(g2Lst[[i]][1])
-  bsamples2[,i] <- unlist(g2Lst[[i]][2])
-}
-
-pdf(paste0(plots_SS, "E0_r2F_b", inv_coupling,"_OBC", extra,"/r2F_vs_r.pdf"))
-  plotwitherror(x, value1, apply(bsamples1, 2, sd), col = "red", ylim = c(0.35, 0.8), main = "g=r^2*dV/dr(L) for different values of r", xlab = "L/a", ylab = "g")
-  plotwitherror(x, value2, apply(bsamples2, 2, sd), col = "blue", rep = TRUE)
-  legend(x = "topright", legend = c("r=1", "r=sqrt(2)"), pch = 1, cex = 1.2, col = c("red", "blue"))
-dev.off()
-```
-Step Scaling for L = 3
-
-```{r}
-temporal_extent <- 32
-spatial_extent <- 3
-boot.R = 500
-r_i <- c(1, sqrt(2), sqrt(5))
-extra = "_0"
-
-rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/"
-datas <- "/home/negro/projects/matching/RU1/02_output/data/"
-plots_SS <- "/home/negro/projects/matching/RU1/02_output/plots/stepScalingPlots/"
-
-# L = 3
-inv_coupling_array <- c(1.4, 1.7, 2.0, 3.0)
-
-g1_lst <- list()
-g2_lst <- list()
-
-bsg1_lst <- list()
-bsg2_lst <- list()
-
-V <- rep(NA, length(inv_coupling_array))
-bsV <- matrix(NA, nrow = boot.R, ncol = length(inv_coupling_array))
-
-for(i in inv_coupling_array)
-{
-  folder <- paste0("pascal_OBC_", i, "_", 3, "_", temporal_extent, extra)
-    
-  for(j in seq_along(r_i))
-  {
-    tmp <- readRDS(paste0(datas, folder, "/fit.result_correlated_", j,".rds"))
-    V[j] <- tmp$t0[[2]]
-    bsV[,j] <- tmp$t[,2]
-  }
-  
-  g1 <- r_i[1]*r_i[1]*(V[2]-V[1])/(r_i[2]-r_i[1])
-  g2 <- r_i[2]*r_i[2]*(V[3]-V[2])/(r_i[3]-r_i[2])
-  
-  bsg1 <- r_i[1]*r_i[1]*(bsV[,2]-bsV[,1])/(r_i[2] - r_i[1])
-  bsg2 <- r_i[2]*r_i[2]*(bsV[,3]-bsV[,2])/(r_i[3] - r_i[2])
-
-  g1_lst[[length(g1_lst) + 1]] <- g1
-  bsg1_lst[[length(bsg1_lst) + 1]] <- bsg1
-  
-  g2_lst[[length(g2_lst) + 1]] <- g2
-  bsg2_lst[[length(bsg2_lst) + 1]] <- bsg2 
-}
-rm(g1)
-rm(g2)
-rm(bsg1)
-rm(bsg2)
-
-g1 <- as.numeric(g1_lst)
-g2 <- as.numeric(g2_lst)
-
-bsg1 <- matrix(unlist(bsg1_lst), nrow = boot.R, ncol = length(inv_coupling_array))
-bsg2 <- matrix(unlist(bsg2_lst), nrow = boot.R, ncol = length(inv_coupling_array))
-
-rm(bsg1_lst)
-rm(bsg2_lst)
-rm(g1_lst)
-rm(g2_lst)
-
-x <- inv_coupling_array
-
-y1 <- g1
-dy1 <- apply(bsg1, 2, sd)
-
-y2 <- g2
-dy2 <- apply(bsg2, 2, sd)
-
-pdf(paste0(plots_SS, "test.pdf"))
-  plotwitherror(x, y1, dy1, col = "blue", pch = 2, cex = 1.5, ylim = c(0, 0.8), xlab = "beta=1/g²", ylab = "r²F(r,g)")
-  grid()
-  plotwitherror(x, y2, dy2, col = "blue", pch = 6, cex = 1.5, rep = TRUE)
-  
-  # L = 4
-inv_coupling_array <- c(1.4, 1.7, 2.0, 3.0)
-
-g1_lst <- list()
-g2_lst <- list()
-
-bsg1_lst <- list()
-bsg2_lst <- list()
-
-V <- rep(NA, length(inv_coupling_array))
-bsV <- matrix(NA, nrow = boot.R, ncol = length(inv_coupling_array))
-
-for(i in inv_coupling_array)
-{
-  folder <- paste0("pascal_OBC_", i, "_", 4, "_", temporal_extent, extra)
-    
-  for(j in seq_along(r_i))
-  {
-    tmp <- readRDS(paste0(datas, folder, "/fit.result_correlated_", j,".rds"))
-    V[j] <- tmp$t0[[2]]
-    bsV[,j] <- tmp$t[,2]
-  }
-  
-  g1 <- r_i[1]*r_i[1]*(V[2]-V[1])/(r_i[2]-r_i[1])
-  g2 <- r_i[2]*r_i[2]*(V[3]-V[2])/(r_i[3]-r_i[2])
-  
-  bsg1 <- r_i[1]*r_i[1]*(bsV[,2]-bsV[,1])/(r_i[2] - r_i[1])
-  bsg2 <- r_i[2]*r_i[2]*(bsV[,3]-bsV[,2])/(r_i[3] - r_i[2])
-
-  g1_lst[[length(g1_lst) + 1]] <- g1
-  bsg1_lst[[length(bsg1_lst) + 1]] <- bsg1
-  
-  g2_lst[[length(g2_lst) + 1]] <- g2
-  bsg2_lst[[length(bsg2_lst) + 1]] <- bsg2 
-}
-rm(g1)
-rm(g2)
-rm(bsg1)
-rm(bsg2)
-
-g1 <- as.numeric(g1_lst)
-g2 <- as.numeric(g2_lst)
-
-bsg1 <- matrix(unlist(bsg1_lst), nrow = boot.R, ncol = length(inv_coupling_array))
-bsg2 <- matrix(unlist(bsg2_lst), nrow = boot.R, ncol = length(inv_coupling_array))
-
-rm(bsg1_lst)
-rm(bsg2_lst)
-rm(g1_lst)
-rm(g2_lst)
-
-x <- inv_coupling_array
-
-y1 <- g1
-dy1 <- apply(bsg1, 2, sd)
-
-y2 <- g2
-dy2 <- apply(bsg2, 2, sd)
-
-plotwitherror(x, y1, dy1, col = "red", pch = 1, cex = 1.5, rep = TRUE)
-plotwitherror(x, y2, dy2, col = "red", pch = 1, cex = 1, rep = TRUE)
-
-par(xpd=TRUE, mar=c(5, 4, 6, 2))
-
-legend(x = "top", inset = c(0, -0.15),
-       legend = c(expression(r[1]^2 ~ F(r[1], g) ~ "3x3"), 
-             expression(r[2]^2 ~ F(r[2], g) ~ "3x3"), 
-             expression(r[1]^2 ~ F(r[1], g) ~ "4x4"), 
-             expression(r[2]^2 ~ F(r[2], g) ~ "4x4")),, pch = c(2, 6, 1, 1), pt.cex = c(1.5, 1.5, 1.5, 1), col = c("blue", "blue", "red", "red"), y.intersp = 1.5, ncol = 2, bty = "n")
-
-
-dev.off()
-
-
-
-```
 
