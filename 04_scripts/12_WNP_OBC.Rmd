@@ -17,8 +17,8 @@ boot.R = 500
 therm = 500
 
 temporal_extent <- 32
-spatial_extent <- 5
-inv_coupling <- 11
+spatial_extent <- 7
+inv_coupling <- 10
 
 if(spatial_extent == 3)
   r_i <- c(1, sqrt(2), 2, sqrt(5), sqrt(8))
@@ -26,6 +26,12 @@ if(spatial_extent == 4)
   r_i <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18))
 if(spatial_extent == 5)
   r_i <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18), 5, sqrt(32))
+if(spatial_extent == 6) ##changed in the script
+  r_i <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32))
+if(spatial_extent == 7) ##changed in the script
+  r_i <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32), sqrt(40), sqrt(72))
+if(spatial_extent == 8) ##changed in the script
+  r_i <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32), sqrt(40), sqrt(72), sqrt(45), sqrt(98))
 
 extra = "_0"
 
@@ -122,7 +128,7 @@ if(!exists("W"))
 pdf(paste0(plots, folder, "/EMASS.pdf"))
 
 lims1 <- rep(list(c(0, 0.1)), length(r_i)%/%2)
-lims2 <- rep(list(c(0.1, 0.2)), length(r_i)%/%2+1)
+lims2 <- rep(list(c(0, 0.2)), length(r_i)%/%2+1)
 lims <- c(lims1, lims2)
 
 #lims <- list(c(0.035, 0.042), c(0.04, 0.06), c(0.05, 0.07), c(0.05, 0.07), c(0.06, 0.08), c(0.065, 0.085), c(0.085, 0.12))
@@ -143,7 +149,7 @@ W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
 }
 range <- seq(1,temporal_extent-1) #????
 
-mask <- list(seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16), seq(6, 16))
+mask <- list(seq(6,16), seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16),seq(6,16), seq(6,16), seq(6,16), seq(6,16), seq(6,16))
 
 fn <- function(par, x, boot.r, ...) par[1] * exp(-par[2] * x)
 ```

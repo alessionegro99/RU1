@@ -10,159 +10,41 @@ library(hadron)
 Initializing stuff
 
 ```{r echo = FALSE}
-rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/OBC/"
-data <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
+rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/FSE_lowstatistics/"
+plots <- "/home/negro/projects/matching/RU1/02_output/plots/OBC/FSE_lowstatistics/"
+data <- "/home/negro/projects/matching/RU1/02_output/data/OBC/FSE_lowstatistics/"
 plots_SS <- "/home/negro/projects/matching/RU1/02_output/plots/SS/OBC/"
 
-r_L3 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8))
-r_L4 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18))
-r_L5 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18), 5, sqrt(32))
-
-r_L3 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8))
-r_L4 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18))
-r_L5 <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18), 5, sqrt(32))
+r_L3 <- c(1, sqrt(2), sqrt(5), sqrt(8))
+r_L4 <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18))
+r_L5 <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32))
 
 r_L6 <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32))
 r_L7 <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32), sqrt(40), sqrt(72))
 r_L8 <- c(1, sqrt(2), sqrt(5), sqrt(8), 3, sqrt(10), sqrt(18), 5, sqrt(32), sqrt(40), sqrt(72),  sqrt(45), sqrt(98))
 
 
-b_L3 <- c(1.4, 1.7, 2, 3, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 90, 100)
-b_L4 <- c(3.25, 4, 4.25, 4.75, 5, 8, 10, 20, 30, 40, 60, 80)
-b_L5 <- c(10, 11, 12, 20, 30, 40, 50, 60, 80, 100)
-b_L6 <- c(10)
-b_L7 <- c(10)
-b_L8 <- c(10)
+b_L3 <- c(11.8)
+b_L4 <- b_L3
+b_L5 <- b_L3
+b_L6 <- b_L3
+b_L7 <- b_L3
+b_L8 <- b_L3
 ```
 
-debug  
 
-```{r}
-rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/OBC/"
-data <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
-plots_SS <- "/home/negro/projects/matching/RU1/02_output/plots/SS/OBC/"
-
-temporal_extent <- 32
-LL <- c(4)
-x0 <- "_0"
-boot.R <- 200
-
-for(ll in seq_along(LL))
-{
-  if(LL[ll] == 4){
-    RR <- c(1, sqrt(2), 2, sqrt(5), sqrt(8), sqrt(10), sqrt(18), sqrt(32))
-    BB <- c(5)
-    spatial_extent <- 4
-  }
-  
-  V <- rep(NA, length(RR))
-  bsV <- matrix(NA, nrow = boot.R, ncol = length(RR))
-  
-  for(bb in seq_along(BB))
-  {
-    folder <- paste0("debug_pascal_OBC_", BB[bb], "_", spatial_extent, "_", temporal_extent, x0)
-    for(rr in seq_along(RR))
-    {
-      tmp <- readRDS(paste0(data, folder, "/fit.result_correlated_", rr, ".rds"))
-      
-      V[rr] <- tmp$t0[[2]]
-      bsV[,rr] <- tmp$t[,2]
-      
-      #fn <- function (par, x, boot.r, ...) par[1] + par[2] * x + par[3] * log(x)
-      #fit.result <- bootstrap.nlsfit(fn, c(0.5, 0.5, 0.5), V, rr, bsV)
-      
-      pdf(paste0(plots, folder, "/V_r.pdf"))
-      plotwitherror(RR, V, apply(bsV, 2, sd), ylab = "V(r)", xlab = "r", pch = 2, cex = 0.75, main = paste0("V(r) for L = ", spatial_extent, ", beta = ", BB[bb]))
-      grid()
-      dev.off()
-    }
-    rm(tmp)
-  }
-}
-```
-
-Plotting V(r)
+plotting r2F(r,g) for the same beta ( = 11.8), at different L, same values of r1 and r2 ( r1 = sqrt2 r2 = sqrt5 r3 = sqrt8)
 
 ```{r}
 temporal_extent <- 32
-LL <- c(3, 4, 5, 6, 7, 8)
-x0 <- "_0"
-boot.R <- 500
-
-for(ll in seq_along(LL))
-{
-  if(LL[ll] == 3){
-    RR <- r_L3
-    BB <- b_L3
-    spatial_extent <- 3
-  }
-  else if(LL[ll] == 4){
-    RR <- r_L4
-    BB <- b_L4
-    spatial_extent <- 4
-  }
-  else if(LL[ll] == 5){
-    RR <- r_L5
-    BB <- b_L5
-    spatial_extent <- 5
-  }
-  else if(LL[ll] == 6){
-    RR <- r_L6
-    BB <- b_L6
-    spatial_extent <- 6
-  }
-  else if(LL[ll] == 7){
-    RR <- r_L7
-    BB <- b_L7
-    spatial_extent <- 7
-  }
-  else if(LL[ll] == 8){
-    RR <- r_L8
-    BB <- b_L8
-    spatial_extent <- 8
-  }
-  
-  V <- rep(NA, length(RR))
-  bsV <- matrix(NA, nrow = boot.R, ncol = length(RR))
-  
-  for(bb in seq_along(BB))
-  {
-    folder <- paste0("pascal_OBC_", BB[bb], "_", spatial_extent, "_", temporal_extent, x0)
-    
-    for(rr in seq_along(RR))
-    {
-      tmp <- readRDS(paste0(data, folder, "/fit.result_correlated_", rr, ".rds"))
-      
-      V[rr] <- tmp$t0[[2]]
-      bsV[,rr] <- tmp$t[,2]
-      
-      #fn <- function (par, x, boot.r, ...) par[1] + par[2] * x + par[3] * log(x)
-      #fit.result <- bootstrap.nlsfit(fn, c(0.5, 0.5, 0.5), V, rr, bsV)
-      
-      pdf(paste0(plots, folder, "/V_r.pdf"))
-      plotwitherror(RR, V, apply(bsV, 2, sd), ylab = "V(r)", xlab = "r", pch = 2, cex = 0.75, main = paste0("V(r) for L = ", spatial_extent, ", beta = ", BB[bb]))
-      grid()
-      dev.off()
-    }
-    rm(tmp)
-  }
-}
-```
-
-plotting r2F(r,g) for the same beta ( = 10), at different L, same values of r1 and r2 ( r1 = sqrt2 r2 = sqrt5 r3 = sqrt8)
-
-```{r}
-temporal_extent <- 32
-spatial_extent_array <- c(3, 4, 5, 6, 7, 8)
+spatial_extent_array <- c(5, 6, 7, 8)
 boot.R = 500
 x0 = "_0"
 
 col_array <- c("blue", "red", "orange", "purple", "darkgreen", "magenta")
 
-mask_r_L <- list(c(1, 4, 5), c(1, 4, 5), c(1, 4, 5), c(1, 3, 4), c(1, 3, 4), c(1, 3, 4))
-mask_b_L <- list(c(6), c(7), c(1), c(1), c(1), c(1))
+mask_r_L <- list(c(4, 8, 9), c(4, 8, 9), c(4, 8, 9), c(4, 8, 9), c(4, 8, 9), c(4, 8, 9))
+mask_b_L <- list(c(1), c(1), c(1), c(1), c(1), c(1))
 
 x_plot <- rep(NA, length(spatial_extent_array))
 y1_plot <- rep(NA, length(spatial_extent_array))
@@ -246,7 +128,8 @@ for(spatial_extent_index in seq_along(spatial_extent_array))
   bsy2_plot[,spatial_extent_index] <- bsg2[,1]
 }
 
-pdf(paste0(plots_SS, "r2F(r,g)_vs_L"))
+pdf(paste0(plots_SS, "r2F(r,11.8)_vs_L"))
+
 plotwitherror(x_plot, y1_plot, apply(bsy1_plot, 2, sd), ylim = c(y1_plot[3],y2_plot[1]), col = col_array, pch = 2, cex = 1.5, xlab = "L", ylab = "r²F(r, g)")
 par(xpd = FALSE)
 grid()
