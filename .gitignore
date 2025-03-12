@@ -48,5 +48,5 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-./01_rawdata/*
-./02_output/*
+/01_rawdata/
+/02_output/
