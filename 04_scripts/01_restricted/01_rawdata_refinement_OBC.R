@@ -16,24 +16,25 @@ therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(32) # array of temporal extents to analyse
-SS <- c(3) # array of spatial extents to analyse
-BB <- c(2) # array of inverse couplings to analyse
+SS <- c(4) # array of spatial extents to analyse
+BB <- c(4.25, 3) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 6 # max length of Wloops
+RMAX <- 5 # max length of Wloops
 
 ## array of distances (simulation dependent)
-r_i <- list()
-for(i in seq(1,RMAX-1)){
-  for(j in seq(0,i)){
-  if((sqrt(i^2 + j^2)) < RMAX)
-    r_i[[length(r_i) + 1]] <- sqrt(i^2 + j^2)
-  }
-}
 
 for (temporal_extent in TT) {
   for (spatial_extent in SS) {
     for (inv_coupling in BB) {
+      r_i <- list()
+      for(i in seq(1,spatial_extent-1)){
+        for(j in seq(0,i)){
+          if((sqrt(i^2 + j^2)) < RMAX)
+            r_i[[length(r_i) + 1]] <- sqrt(i^2 + j^2)
+        }
+      }
+
       #######################################
       folder <- paste0("pascal_OBC_", inv_coupling, "_", spatial_extent, "_", temporal_extent, "_", R0)
       if (!dir.exists(paste0(plots, folder))) {
@@ -49,7 +50,7 @@ for (temporal_extent in TT) {
       ))
 
       ## skipping the header
-      data <- as.matrix(read.table(paste0(rawdata, folder, "/", folder, ".dat"), skip = 1))
+      data <- as.matrix(read.table(paste0(rawdata, folder, "/", folder, ".dat"), skip = 20 ))
       #######################################
       
       message("thermalization...")
@@ -124,7 +125,7 @@ for (temporal_extent in TT) {
       for (i in seq_along(r_i)) {
         e_mass <- bootstrap.effectivemass(W[[i]], type = "log")
         ulim <- e_mass$effMass[1] + e_mass$deffMass[1]
-        llim <- e_mass$effMass[5] - 3*e_mass$deffMass[5]
+        llim <- e_mass$effMass[8] - 3*e_mass$deffMass[8]
         lims <- c(llim, ulim)
         plot(e_mass, main = paste0("Effective mass for r = ", r_i[i]), ylab = expression(m[eff]), xlab = "t", xlim = c(0, 16), ylim = lims)
         grid()
@@ -139,6 +140,7 @@ for (temporal_extent in TT) {
       }
       
       mask <- rep(list(seq(6, 16)), length(r_i))
+                  
       range <- seq(1, temporal_extent - 1)
 
       pdf(paste0(plots, folder, "/uncorrelated_fit.pdf"))
