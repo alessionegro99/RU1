@@ -22,24 +22,13 @@ therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(32) # array of temporal extents to analyse
-SS <- c(3, 4, 5, 6, 7, 8, 9, 10) # array of spatial extents to analyse
-BB <- c(3) # array of inverse couplings to analyse
+SS <- c(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18) # array of spatial extents to analyse
+BB <- c(11.8) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 3 # max length of Wloops
+RMAX <- 6 # max length of Wloops
 
-## array of distances (simulation dependent)
-r_i <- c()
-
-for(i in seq(1, RMAX - 1)){
-  for(j in seq(0, i)){
-    value <- sqrt(i^2 + j^2)
-    if(value < RMAX)
-      r_i <- c(r_i, value)
-  }
-}
-
-message("r_i: ", paste(r_i, collapse = ", "))
+#message("r_i: ", paste(r_i, collapse = ", "))
 ```
 
 Plotting V(r)
@@ -51,6 +40,16 @@ for (temporal_extent in TT)
   {
     for (inv_coupling in BB)
     {
+      r_i <- c()
+
+      for(i in seq(1, spatial_extent - 1)){
+        for(j in seq(0, i)){
+          value <- sqrt(i^2 + j^2)
+          if(value < RMAX)
+            r_i <- c(r_i, value)
+        }
+      }
+      
       V <- rep(NA, length(r_i))
       bsV <- matrix(NA, nrow = boot.R, ncol = length(r_i))
 
@@ -78,57 +77,69 @@ FSE on r2F.
 
 ```{r}
 c1 <- "purple"
-c2<- "orange"
-r123 <- c(1, sqrt(5), sqrt(8))
-inv_coupling <- 3
+c2 <- "orange"
+r123 <- c(sqrt(5), sqrt(25), sqrt(32))
+inv_coupling <- 11.8
 temporal_extent <- 32
-SS <- c(3, 4, 5, 6, 7, 8, 9, 10)
-
-indices <- sapply(r123, function(x) which(abs(r_i - x) < 1e-9))
-
-RR <- r_i[indices]
+SS <- c(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
 
 y1_plot <- rep(NA, length(SS))
 bsy1_plot <- matrix(NA, nrow = boot.R, ncol = length(SS))
 y2_plot <- rep(NA, length(SS))
 bsy2_plot <- matrix(NA, nrow = boot.R, ncol = length(SS))
 
-  for (ss in seq_along(SS))
-  {
-    folder <- paste0("pascal_OBC_", inv_coupling, "_", SS[ss], "_", temporal_extent, "_", R0)
+for (ss in seq_along(SS))
+{
+  r_i <- c()
 
-    V <- rep(NA, length(RR))
-    bsV <- matrix(NA, nrow = boot.R, ncol = length(RR))
 
-    for (rr in seq_along(RR))
-    {
-      tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", indices[rr], ".rds"))
-
-      V[rr] <- tmp$t0[[2]]
-      bsV[, rr] <- tmp$t[, 2]
+  for (i in seq(1, SS[ss] - 1)) {
+    for (j in seq(0, i)) {
+      value <- sqrt(i^2 + j^2)
+      if (value < RMAX) {
+        r_i <- c(r_i, value)
+      }
     }
-    rm(tmp)
-
-    g1 <- RR[1] * RR[1] * (V[2] - V[1]) / (RR[2] - RR[1])
-    g2 <- RR[2] * RR[2] * (V[3] - V[2]) / (RR[3] - RR[2])
-
-    bsg1 <- RR[1] * RR[1] * (bsV[, 2] - bsV[, 1]) / (RR[2] - RR[1])
-    bsg2 <- RR[2] * RR[2] * (bsV[, 3] - bsV[, 2]) / (RR[3] - RR[2])
-    rm(V)
-    rm(bsV)
-
-    dg1 <- sd(bsg1)
-    dg2 <- sd(bsg1)
-
-    y1_plot[ss] <- g1
-    bsy1_plot[, ss] <- bsg1
-    y2_plot[ss] <- g2
-    bsy2_plot[, ss] <- bsg2
   }
 
+  if(ss == 1){
+  indices <- sapply(r123, function(x) which(abs(r_i - x) < 1e-9))
+  RR <- r_i[indices]
+  }
 
-pdf(paste0(plots_gen, "FSE/FSE_r2F_", round(RR[1],2), "_", round(RR[2],2), "_", round(RR[3],2) , "_", inv_coupling, ".pdf"))
-plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), ylim = c(y1_plot[3], y2_plot[1] + 0.02), col = c1, pch = 2, cex = 1.5, xlab = "L", ylab = "r²F(r, g)")
+  folder <- paste0("pascal_OBC_", inv_coupling, "_", SS[ss], "_", temporal_extent, "_", R0)
+  V <- rep(NA, length(RR))
+  bsV <- matrix(NA, nrow = boot.R, ncol = length(RR))
+
+  for (rr in seq_along(RR))
+  {
+    tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", indices[rr], ".rds"))
+
+    V[rr] <- tmp$t0[[2]]
+    bsV[, rr] <- tmp$t[, 2]
+  }
+  rm(tmp)
+
+  g1 <- RR[1] * RR[1] * (V[2] - V[1]) / (RR[2] - RR[1])
+  g2 <- RR[2] * RR[2] * (V[3] - V[2]) / (RR[3] - RR[2])
+
+  bsg1 <- RR[1] * RR[1] * (bsV[, 2] - bsV[, 1]) / (RR[2] - RR[1])
+  bsg2 <- RR[2] * RR[2] * (bsV[, 3] - bsV[, 2]) / (RR[3] - RR[2])
+  rm(V)
+  rm(bsV)
+
+  dg1 <- sd(bsg1)
+  dg2 <- sd(bsg1)
+
+  y1_plot[ss] <- g1
+  bsy1_plot[, ss] <- bsg1
+  y2_plot[ss] <- g2
+  bsy2_plot[, ss] <- bsg2
+}
+
+
+pdf(paste0(plots_gen, "FSE/FSE_r2F_", round(RR[1], 2), "_", round(RR[2], 2), "_", round(RR[3], 2), "_", inv_coupling, ".pdf"))
+plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), ylim = c(y1_plot[3], y2_plot[1] + 0.02), col = c1, pch = 2, cex = 1.5, xlab = "L/a", ylab = "r²F(r, g)")
 par(xpd = FALSE)
 grid()
 par(xpd = TRUE, mar = c(5, 6, 6, 2))
@@ -149,20 +160,20 @@ legend(
 )
 legend(
   x = "topright",
-  legend = c(expression(r[1] == 1), expression(r[2] == 2.24), expression(r[3] == 2.82), expression("beta" == 3)),
+  legend = c(expression(r[1] == 2.24), expression(r[2] == 5), expression(r[3] == 5.66), expression("beta" == 11.8)),
   ncol = 2
 )
 
-plotwitherror(SS, y2_plot, apply(bsy2_plot, 2, sd), col = c2, pch = 6, cex = 1.5, xlab = "L", rep = TRUE)
+plotwitherror(SS, y2_plot, apply(bsy2_plot, 2, sd), col = c2, pch = 6, cex = 1.5, xlab = "L/a", rep = TRUE)
 
 # zooming in top
 par(xpd = FALSE, mar = c(5, 6, 6, 2))
-plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), col = c1, pch = 2, cex = 1.5, xlab = "L", ylab = expression(g[2]))
+plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), col = c1, pch = 2, cex = 1.5, xlab = "L/a", ylab = expression(g[2]))
 grid()
 
 # zooming in bottom
 par(xpd = FALSE)
-plotwitherror(SS, y2_plot, apply(bsy2_plot, 2, sd), col = c2, pch = 6, cex = 1.5, xlab = "L", ylab = expression(g[1]))
+plotwitherror(SS, y2_plot, apply(bsy2_plot, 2, sd), col = c2, pch = 6, cex = 1.5, xlab = "L/a", ylab = expression(g[1]))
 grid()
 
 dev.off()
@@ -174,14 +185,12 @@ FSE on E0.
 c1 <- "blue"
 c2 <- "red"
 c3 <- "green"
-r123 <- c(1, sqrt(5), sqrt(8))
-inv_coupling <- 3
+
+r123 <- c(sqrt(5), sqrt(25), sqrt(32))
+inv_coupling <- 11.8
 temporal_extent <- 32
-SS <- c(3, 4, 5, 6, 7, 8, 9, 10)
+SS <- c(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
 
-indices <- sapply(r123, function(x) which(abs(r_i - x) < 1e-9))
-
-RR <- r_i[indices]
 
 y1_plot <- rep(NA, length(SS))
 bsy1_plot <- matrix(NA, nrow = boot.R, ncol = length(SS))
@@ -195,6 +204,23 @@ bsy3_plot <- matrix(NA, nrow = boot.R, ncol = length(SS))
 for (ss in seq_along(SS))
 {
   spatial_extent <- SS[ss]
+  
+    r_i <- c()
+
+
+  for (i in seq(1, SS[ss] - 1)) {
+    for (j in seq(0, i)) {
+      value <- sqrt(i^2 + j^2)
+      if (value < RMAX) {
+        r_i <- c(r_i, value)
+      }
+    }
+  }
+
+  if(ss == 1){
+  indices <- sapply(r123, function(x) which(abs(r_i - x) < 1e-9))
+  RR <- r_i[indices]
+  }
 
   V <- rep(NA, length(RR))
   bsV <- matrix(NA, nrow = boot.R, ncol = length(RR))
@@ -219,13 +245,13 @@ for (ss in seq_along(SS))
 }
 
 pdf(paste0(plots_gen, "FSE/FSE_E0_", round(RR[1],2), "_", round(RR[2],2), "_", round(RR[3],2) , "_", inv_coupling, ".pdf"))
-plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), ylim = c(0.128, 0.275), col = c1, pch = 2, cex = 1.5, ylab = expression(E[0]), xlab = "L")
+plotwitherror(SS, y1_plot, apply(bsy1_plot, 2, sd), ylim = c(0.045, 0.085), col = c1, pch = 2, cex = 1.5, ylab = expression(E[0]), xlab = "L/a")
 grid()
 
 par(xpd = TRUE, mar = c(4, 5, 3, 3))
 legend(
   x = "topright",
-  legend = c(expression(r[1] == 1), expression(r[2] == 2.24), expression(r[3] == 2.82), expression("beta" == 3)),
+  legend = c(expression(r[1] == 2.24), expression(r[2] == 5), expression(r[3] == 5.66), expression("beta" == 11.8)),
   ncol = 2
 )
 legend(
