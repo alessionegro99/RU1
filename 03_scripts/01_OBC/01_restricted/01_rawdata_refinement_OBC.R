@@ -16,11 +16,11 @@ therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(32) # array of temporal extents to analyse
-SS <- c(4) # array of spatial extents to analyse
-BB <- c(3) # array of inverse couplings to analyse
+SS <- c(19, 20, 22, 24, 26, 28, 30, 32) # array of spatial extents to analyse
+BB <- c(11.8) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 3 # max length of Wloops
+RMAX <- 6 # max length of Wloops
 
 ## array of distances (simulation dependent)
 
@@ -172,6 +172,27 @@ for (temporal_extent in TT) {
       }
       dev.off()
       #######################################
+      
+      message("plotting the potential...")
+      ## performing uncorrelated fit to Wloop in a range specified by mask
+      V <- rep(NA, length(r_i))
+      bsV <- matrix(NA, nrow = boot.R, ncol = length(r_i))
+      
+      for (rr in seq_along(r_i))
+      {
+        tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", rr, ".rds"))
+        
+        V[rr] <- tmp$t0[[2]]
+        bsV[, rr] <- tmp$t[, 2]
+      }
+      pdf(paste0(plots, folder, "/V_r.pdf"))
+      plotwitherror(unlist(r_i), V, apply(bsV, 2, sd)
+                    , ylab = "V(r)", xlab = "r"
+                    , pch = 2, cex = 0.75
+                    , main = paste0("V(r) for L = ", spatial_extent, ", beta = ", inv_coupling))
+      grid()
+      dev.off()
+      rm(tmp)
     }
   }
 }
