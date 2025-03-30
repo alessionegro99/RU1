@@ -1,4 +1,4 @@
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))  
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 getwd()
 
 library(hadron)
@@ -10,17 +10,17 @@ plots <- "/home/negro/projects/matching/RU1/02_output/plots/restricted/OBC/"
 datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
 
 ## set refinement parameters
-boot.l <- 500 # block size
-boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 500 # number of configuration to discard for thermalization
+boot.l <- 200 # block size
+boot.R <- 200 # number of bootstrap samples (usually 200, 500 or 1000)
+therm <- 1000 # number of configuration to discard for thermalization
 
 ## set simulation parameters
-TT <- c(32) # array of temporal extents to analyse
-SS <- c(19, 20, 22, 24, 26, 28, 30, 32) # array of spatial extents to analyse
-BB <- c(11.8) # array of inverse couplings to analyse
+TT <- c(64) # array of temporal extents to analyse
+SS <- c(8, 16) # array of spatial extents to analyse
+BB <- c(3) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 6 # max length of Wloops
+RMAX <- 4 # max length of Wloops
 
 ## array of distances (simulation dependent)
 
@@ -28,10 +28,11 @@ for (temporal_extent in TT) {
   for (spatial_extent in SS) {
     for (inv_coupling in BB) {
       r_i <- list()
-      for(i in seq(1,spatial_extent-1)){
-        for(j in seq(0,i)){
-          if((sqrt(i^2 + j^2)) < RMAX)
+      for (i in seq(1, spatial_extent - 1)) {
+        for (j in seq(0, i)) {
+          if ((sqrt(i^2 + j^2)) < RMAX) {
             r_i[[length(r_i) + 1]] <- sqrt(i^2 + j^2)
+          }
         }
       }
 
@@ -43,16 +44,16 @@ for (temporal_extent in TT) {
       if (!dir.exists(paste0(datas, folder))) {
         dir.create(paste0(datas, folder))
       }
-      
+
       message(sprintf(
         "Analyzing data for:\n- Temporal extent: %s\n- Spatial extent: %s\n- Inverse coupling: %s",
         temporal_extent, spatial_extent, inv_coupling
       ))
 
       ## skipping the header
-      data <- as.matrix(read.table(paste0(rawdata, folder, "/", folder, ".dat"), skip = 20 ))
+      data <- as.matrix(read.table(paste0(rawdata, folder, "/", folder, ".dat"), skip = 20))
       #######################################
-      
+
       message("thermalization...")
       ## MC history plot for every distance in r_i
       pdf(paste0(plots, folder, "/thermalization.pdf"))
@@ -66,9 +67,9 @@ for (temporal_extent in TT) {
       }
       dev.off()
 
-      data <- data[-(1:therm),]
+      data <- data[-(1:therm), ]
       #######################################
-      
+
       message("bootstrap analysis...")
       ## bootstrap analysis for every distance in r_i
       pdf(paste0(plots, folder, "/bootstrap_analysis.pdf"))
@@ -84,7 +85,7 @@ for (temporal_extent in TT) {
       }
       dev.off()
       #######################################
-      
+
       message("bootstrapping Wilson loops data...")
       ## bootstrapping for every distance in r_i
       W <- list()
@@ -98,7 +99,7 @@ for (temporal_extent in TT) {
         W[[length(W) + 1]] <- bootstrap.cf(cf = tmp, boot.R = boot.R, boot.l = boot.l, sim = "fixed", endcorr = TRUE, seed = 1234567)
       }
       #######################################
-      
+
       message("saving bootstrapped Wilson loops data...")
       ## saving wloop data
       saveRDS(W, paste0(datas, folder, "/Wloops.rds"))
@@ -115,7 +116,7 @@ for (temporal_extent in TT) {
       }
       dev.off()
       #######################################
-      
+
       message("computing effective mass...")
       ## computing effective mass
       if (!exists("W")) {
@@ -125,22 +126,22 @@ for (temporal_extent in TT) {
       for (i in seq_along(r_i)) {
         e_mass <- bootstrap.effectivemass(W[[i]], type = "log")
         ulim <- e_mass$effMass[1] + e_mass$deffMass[1]
-        llim <- e_mass$effMass[8] - 3*e_mass$deffMass[8]
+        llim <- e_mass$effMass[8] - 3 * e_mass$deffMass[8]
         lims <- c(llim, ulim)
         plot(e_mass, main = paste0("Effective mass for r = ", r_i[i]), ylab = expression(m[eff]), xlab = "t", xlim = c(0, 16), ylim = lims)
         grid()
       }
       dev.off()
       #######################################
-      
+
       message("performing uncorrelated fit to the data...")
       ## performing uncorrelated fit to Wloop in a range specified by mask
       if (!exists("W")) {
         W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
       }
-      
+
       mask <- rep(list(seq(6, 16)), length(r_i))
-                  
+
       range <- seq(1, temporal_extent - 1)
 
       pdf(paste0(plots, folder, "/uncorrelated_fit.pdf"))
@@ -172,24 +173,25 @@ for (temporal_extent in TT) {
       }
       dev.off()
       #######################################
-      
+
       message("plotting the potential...")
       ## performing uncorrelated fit to Wloop in a range specified by mask
       V <- rep(NA, length(r_i))
       bsV <- matrix(NA, nrow = boot.R, ncol = length(r_i))
-      
+
       for (rr in seq_along(r_i))
       {
         tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", rr, ".rds"))
-        
+
         V[rr] <- tmp$t0[[2]]
         bsV[, rr] <- tmp$t[, 2]
       }
       pdf(paste0(plots, folder, "/V_r.pdf"))
-      plotwitherror(unlist(r_i), V, apply(bsV, 2, sd)
-                    , ylab = "V(r)", xlab = "r"
-                    , pch = 2, cex = 0.75
-                    , main = paste0("V(r) for L = ", spatial_extent, ", beta = ", inv_coupling))
+      plotwitherror(unlist(r_i), V, apply(bsV, 2, sd),
+        ylab = "V(r)", xlab = "r",
+        pch = 2, cex = 0.75,
+        main = paste0("V(r) for L = ", spatial_extent, ", beta = ", inv_coupling)
+      )
       grid()
       dev.off()
       rm(tmp)

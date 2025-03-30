@@ -6,9 +6,7 @@ plots_gen <- "/home/negro/projects/matching/RU1/02_output/plots/general/OBC/"
 datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
 
 ## set refinement parameters
-boot.l <- 500 # block size
 boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 tt <- 32 # temporal extent to analyse

@@ -6,21 +6,24 @@ plots_gen <- "/home/negro/projects/matching/RU1/02_output/plots/general/OBC/"
 datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
 
 ## set refinement parameters
-boot.l <- 500 # block size
 boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 tt <- 32 # temporal extent to analyse
-SS <- c(seq(5, 20, by = 1), seq(22, 32, by  = 2)) # array of spatial extents to analyse
+SS <- c(seq(5, 20, by = 1), seq(22, 32, by = 2)) # array of spatial extents to analyse
 bb <- 11.8 # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
+
+y1 <- c()
+y2 <- c()
+dy1 <- c()
+dy2 <- c()
 
 CC <- c("purple", "orange")
 
 RMAX <- 6 # max length of Wloops
 
-RR123 <- c(sqrt(5), sqrt(25), sqrt(32))
+RR123 <- c(sqrt(5), 5, sqrt(32))
 RRR <- list() # available distances
 for (ss in seq_along(SS)){
   foo <- c()
@@ -76,49 +79,92 @@ for (ss in seq_along(SS))
   rm(V)
   rm(bsV)
   
-  if(ss == 1){
-    par(xpd = TRUE, mar = c(4.5, 4.5, 4, 3))
-    plotwitherror(SS[ss], g1, sd(bsg1)
-                  , col = CC[1], pch = 2, cex = 1.5
-                  , ylab = expression(r^2*F(r,g)), xlab = "L/a"
-                  , xlim = c(SS[1], SS[length(SS)])
-                  , ylim = c(g1*0.85, g2))
-    par(xpd = FALSE)
-    grid()
-    par(xpd = TRUE)
-  }
-  else{
-    plotwitherror(SS[ss], g1, sd(bsg1)
-                  , col = CC[1], pch = 2, cex = 1.5
-                  , rep = TRUE)
-  }
-
-  legend(
-    x = "topright",
-    legend = c(bquote(r[1] == .(round(RR[1],2)))
-               , bquote(r[2] == .(round(RR[2],2)))
-               , bquote(r[3] == .(round(RR[3],2)))
-               , bquote("beta" == .(bb))),
-    ncol = 2
-  )
-  legend(
-    x = "top",
-    inset = c(0, -0.1),
-    bty = "n",
-    legend = c(
-      expression(r^2*F(r[1],g)),
-      expression(r^2*F(r[2],g))
-    ),
-    pch = c(2, 6, 0), 
-    pt.cex = 1.5, 
-    col = CC,
-    
-    y.intersp = 1.5, 
-    ncol = 2
-  )
-  plotwitherror(SS[ss], g2, sd(bsg2)
-                , col = CC[2], pch = 6, cex = 1.5, rep = TRUE)
+  y1 <- c(y1, g1)
+  y2 <- c(y2, g2)
+  dy1 <- c(dy1, sd(bsg1))
+  dy2 <- c(dy2, sd(bsg2))
 }
-dev.off()
 
+par(xpd = TRUE, mar = c(4.5, 4.5, 4, 3))
+
+plotwitherror(SS, y1, dy1,
+              col = CC[1], pch = 2, cex = 1.5 , ylab = expression(r^2 * F(r, g)), xlab = "L/a"
+)
+par(xpd = FALSE)
+grid()
+par(xpd = TRUE)
+legend(
+  x = "top",
+  inset = c(0, -0.1),
+  bty = "n",
+  legend = c(
+    expression(r^2 * F(r[1], g))),
+  pch = 2,
+  pt.cex = 1.5,
+  col = CC[1],
+  y.intersp = 1.5,
+  ncol = 1
+)
+
+plotwitherror(SS, y2, dy2,
+              col = CC[2], pch = 6, cex = 1.5, ylab = expression(r^2 * F(r, g)), xlab = "L/a"
+)
+par(xpd = FALSE)
+grid()
+par(xpd = TRUE)
+
+legend(
+  x = "top",
+  inset = c(0, -0.1),
+  bty = "n",
+  legend = c(
+    expression(r^2 * F(r[2], g))
+  ),
+  pch = 6,
+  pt.cex = 1.5,
+  col = CC[2],
+  y.intersp = 1.5,
+  ncol = 1
+)
+
+plotwitherror(SS, y1, dy1,
+  col = CC[1], pch = 2, cex = 1.5,
+  ylab = expression(r^2 * F(r, g)), xlab = "L/a",
+  xlim = c(SS[1], SS[length(SS)]),
+  ylim = c(y1[1] * 0.8, y2[1])
+)
+par(xpd = FALSE)
+grid()
+par(xpd = TRUE)
+
+legend(
+  x = "topright",
+  legend = c(
+    bquote(r[1] == .(round(RR[1], 2))),
+    bquote(r[2] == .(round(RR[2], 2))),
+    bquote(r[3] == .(round(RR[3], 2))),
+    bquote("beta" == .(bb))
+  ),
+  ncol = 2
+)
+legend(
+  x = "top",
+  inset = c(0, -0.1),
+  bty = "n",
+  legend = c(
+    expression(r^2 * F(r[1], g)),
+    expression(r^2 * F(r[2], g))
+  ),
+  pch = c(2, 6, 0),
+  pt.cex = 1.5,
+  col = CC,
+  y.intersp = 1.5,
+  ncol = 2
+)
+plotwitherror(SS, y2, dy2,
+  col = CC[2], pch = 6, cex = 1.5, rep = TRUE
+)
+par(xpd = TRUE, mar = c(4.5, 4.5, 4, 3))
+
+dev.off()
 

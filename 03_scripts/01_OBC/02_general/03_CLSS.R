@@ -6,17 +6,17 @@ plots_gen <- "/home/negro/projects/matching/RU1/02_output/plots/general/OBC/"
 datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
 
 ## set refinement parameters
-boot.l <- 500 # block size
+boot.l <- 50 # block size
 boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
 therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
-tt <- 32 # temporal extent
-SS <- c(3, 4, 5) # array of spatial extents to analyse
-BB <- c(3, 4.25, 11.8) # array of inverse couplings to analyse
+tt <- 64 # temporal extent
+SS <- c(8, 10, 12) # array of spatial extents to analyse
+BB <- c(3, 4, 8) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- c(3, 5, 6) # max length of Wloops
+RMAX <- c(6, 6, 6) # max length of Wloops
 
 RRR123 <- list(c(1, sqrt(5), sqrt(8))
                , c(sqrt(2), sqrt(10), sqrt(18))
@@ -97,7 +97,7 @@ for (ss in seq_along(SS)) {
     plotwitherror(bb, g1[ss], dg1[ss],
                   col = cc, pch = pch[1], cex = cex[1],
                   xlab = "beta=1/g²", ylab = "r²F(r,g)",
-                  xlim = c(3, 12), ylim = c(0, 0.5), xaxt = "n"
+                  xlim = c(3, 12), ylim = c(0.04, 0.23), xaxt = "n"
     )
     segments(x0 = bb, x1 = bb, y0 = g1[1], y1 = g2[ss], col = cc, lty = "dashed", lwd = 2)
     segments(x0 = bb, x1 = bb, y0 = 0, y1 = g1[ss], col = "lightgray", lty = "dotted", lwd = 2)
