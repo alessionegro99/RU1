@@ -6,8 +6,7 @@ library(hadron)
 source("00_functions.R")
 
 rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/restricted/OBC/"
-datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
+output <- "/home/negro/projects/matching/RU1/02_output/restricted/OBC/"
 
 ## set refinement parameters
 boot.l <- 200 # block size
@@ -20,7 +19,7 @@ SS <- c(8, 16) # array of spatial extents to analyse
 BB <- c(3) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 4 # max length of Wloops
+RMAX <- 4  # max length of Wloops
 
 ## array of distances (simulation dependent)
 
@@ -38,11 +37,11 @@ for (temporal_extent in TT) {
 
       #######################################
       folder <- paste0("pascal_OBC_", inv_coupling, "_", spatial_extent, "_", temporal_extent, "_", R0)
-      if (!dir.exists(paste0(plots, folder))) {
-        dir.create(paste0(plots, folder))
+      if (!dir.exists(paste0(output, folder))) {
+        dir.create(paste0(output, folder))
       }
-      if (!dir.exists(paste0(datas, folder))) {
-        dir.create(paste0(datas, folder))
+      if (!dir.exists(paste0(output, folder))) {
+        dir.create(paste0(output, folder))
       }
 
       message(sprintf(
@@ -51,12 +50,12 @@ for (temporal_extent in TT) {
       ))
 
       ## skipping the header
-      data <- as.matrix(read.table(paste0(rawdata, folder, "/", folder, ".dat"), skip = 20))
+      data <- as.matrix(read.table(paste0(rawdata, folder,".dat"), skip = 20))
       #######################################
 
       message("thermalization...")
       ## MC history plot for every distance in r_i
-      pdf(paste0(plots, folder, "/thermalization.pdf"))
+      pdf(paste0(output, folder, "/thermalization.pdf"))
       for (i in seq_along(r_i)) {
         W <- data[, seq(4 + i, ncol(data), length(r_i))]
         time_series <- W[, 1]
@@ -72,7 +71,7 @@ for (temporal_extent in TT) {
 
       message("bootstrap analysis...")
       ## bootstrap analysis for every distance in r_i
-      pdf(paste0(plots, folder, "/bootstrap_analysis.pdf"))
+      pdf(paste0(output, folder, "/bootstrap_analysis.pdf"))
       for (i in seq_along(r_i)) {
         tmp <- data[, seq(5 + (i - 1), ncol(data), length(r_i))]
         Time <- ncol(tmp)
@@ -100,14 +99,14 @@ for (temporal_extent in TT) {
       }
       #######################################
 
-      message("saving bootstrapped Wilson loops data...")
-      ## saving wloop data
-      saveRDS(W, paste0(datas, folder, "/Wloops.rds"))
-      #######################################
+      # message("saving bootstrapped Wilson loops data...")
+      # ## saving wloop data
+      # saveRDS(W, paste0(output, folder, "/Wloops.rds"))
+      # #######################################
 
       message("plotting Wilson loops...")
       ## plotting wloop data
-      pdf(paste0(plots, folder, "/NPWL.pdf"))
+      pdf(paste0(output, folder, "/NPWL.pdf"))
       for (i in seq_along(r_i)) {
         plot(W[[i]], main = paste0("Non planar Wilson loop for R = ", r_i[i]), ylab = "W(R,T)", xlab = "t")
         grid()
@@ -120,9 +119,9 @@ for (temporal_extent in TT) {
       message("computing effective mass...")
       ## computing effective mass
       if (!exists("W")) {
-        W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
+        W <- readRDS(paste0(output, folder, "/Wloops.rds"))
       }
-      pdf(paste0(plots, folder, "/EMASS.pdf"))
+      pdf(paste0(output, folder, "/EMASS.pdf"))
       for (i in seq_along(r_i)) {
         e_mass <- bootstrap.effectivemass(W[[i]], type = "log")
         ulim <- e_mass$effMass[1] + e_mass$deffMass[1]
@@ -137,14 +136,14 @@ for (temporal_extent in TT) {
       message("performing uncorrelated fit to the data...")
       ## performing uncorrelated fit to Wloop in a range specified by mask
       if (!exists("W")) {
-        W <- readRDS(paste0(datas, folder, "/Wloops.rds"))
+        W <- readRDS(paste0(output, folder, "/Wloops.rds"))
       }
 
       mask <- rep(list(seq(6, 16)), length(r_i))
 
       range <- seq(1, temporal_extent - 1)
 
-      pdf(paste0(plots, folder, "/uncorrelated_fit.pdf"))
+      pdf(paste0(output, folder, "/uncorrelated_fit.pdf"))
       for (i in seq_along(r_i)) {
         value <- W[[i]]$cf.tsboot$t0
         bsamples <- W[[i]]$cf.tsboot$t
@@ -168,8 +167,16 @@ for (temporal_extent in TT) {
         print("chi2/dof")
         print(chi2 / dof)
         cat("\n")
+        
+        if (!dir.exists(paste0(output, "fit_results"))) {
+          dir.create(paste0(output, folder, "/fit_results"))
+        }
+        
+        saveRDS(fit.result_uncorrelated, paste0(output, folder, "/fit_results/fit.result_uncorrelated_", i, ".rds"))
 
-        saveRDS(fit.result_uncorrelated, paste0(datas, folder, "/fit.result_uncorrelated_", i, ".rds"))
+        # combined_data <- rbind(fit.result_uncorrelated$t0, fit.result_uncorrelated$t)
+        # write.table(combined_data, file = paste0(output, folder,"/fit_results/fit.result_uncorrelated_", i, ".csv"), sep = " ", row.names = FALSE, col.names = FALSE)
+        # 
       }
       dev.off()
       #######################################
@@ -181,12 +188,12 @@ for (temporal_extent in TT) {
 
       for (rr in seq_along(r_i))
       {
-        tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", rr, ".rds"))
+        tmp <- readRDS(paste0(output, folder, "/fit_results/fit.result_uncorrelated_", rr, ".rds"))
 
         V[rr] <- tmp$t0[[2]]
         bsV[, rr] <- tmp$t[, 2]
       }
-      pdf(paste0(plots, folder, "/V_r.pdf"))
+      pdf(paste0(output, folder, "/V_r.pdf"))
       plotwitherror(unlist(r_i), V, apply(bsV, 2, sd),
         ylab = "V(r)", xlab = "r",
         pch = 2, cex = 0.75,

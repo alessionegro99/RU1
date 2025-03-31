@@ -1,22 +1,19 @@
 library(hadron)
 
 rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
-plots <- "/home/negro/projects/matching/RU1/02_output/plots/restricted/OBC/"
-plots_gen <- "/home/negro/projects/matching/RU1/02_output/plots/general/OBC/"
-datas <- "/home/negro/projects/matching/RU1/02_output/data/OBC/"
+output <- "/home/negro/projects/matching/RU1/02_output/restricted/OBC/"
+output_general <- "/home/negro/projects/matching/RU1/02_output/general/OBC/"
 
 ## set refinement parameters
-boot.l <- 50 # block size
-boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 500 # number of configuration to discard for thermalization
+boot.R <- 200 # number of bootstrap samples (usually 200, 500 or 1000)
 
 ## set simulation parameters
 tt <- 64 # temporal extent
 SS <- c(8, 10, 12) # array of spatial extents to analyse
-BB <- c(3, 4, 8) # array of inverse couplings to analyse
+BB <- c(3, 3.75, 7.25) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- c(6, 6, 6) # max length of Wloops
+RMAX <- c(4, 5, 6) # max length of Wloops
 
 RRR123 <- list(c(1, sqrt(5), sqrt(8))
                , c(sqrt(2), sqrt(10), sqrt(18))
@@ -56,7 +53,7 @@ for (ss in SS){
   title_str <- paste0(title_str, "_L", ss)
 }
 
-pdf(paste0(plots_gen, "CL/CL", title_str, "_b", BB[1], ".pdf"))
+pdf(paste0(output_general, "CL/CL", title_str, "_b", BB[1], ".pdf"))
 for (ss in seq_along(SS)) {
   II <- III[[ss]]
   
@@ -69,7 +66,7 @@ for (ss in seq_along(SS)) {
   folder <- paste0("pascal_OBC_", bb, "_", SS[ss], "_", tt, "_", R0)
   
   for (rr in seq_along(RR)) {
-    tmp <- readRDS(paste0(datas, folder, "/fit.result_uncorrelated_", II[rr], ".rds"))
+    tmp <- readRDS(paste0(output, folder, "/fit_results/fit.result_uncorrelated_", II[rr], ".rds"))
     
     V[rr] <- tmp$t0[[2]]
     bsV[, rr] <- tmp$t[, 2]
@@ -145,6 +142,9 @@ legend(
 )
 dev.off()
 
+## constant fit
+const <- function(par, x, boot.r,...) par[1] + 0*x
+
 ## linear fits for g1 and g2
 fn <- function(par, x, boot.r,...) par[1] + par[2]*x
 
@@ -152,7 +152,7 @@ title_str <- ""
 for (ss in SS){
   title_str <- paste0(title_str, "_L", ss)
 }
-pdf(paste0(plots_gen, "CL/CL", title_str, "_b", BB[1], "_fit.pdf"))
+pdf(paste0(output_general, "CL/CL", title_str, "_b", BB[1], "_fit.pdf"))
 fit.result <- bootstrap.nlsfit(fn = fn, par.guess = c(1,1)
                                , y = g1, x = 1/(SS^2), bsamples = bsg1)
 summary(fit.result)
@@ -188,4 +188,21 @@ legend(x = "topleft"
                     , paste0("b = ", round(fit.result$t0[2],3))
                     , paste0("db = ", round(fit.result$se[2],4))))
 grid()
+
+fit.result <- bootstrap.nlsfit(fn = const, par.guess = c(1)
+                               , y = g2, x = 1/(SS^2), bsamples = bsg2)
+summary(fit.result)
+par(xpd=FALSE, mar=c(4.5, 4.5, 4, 3) + 0.1)
+plot(fit.result
+     , pch = c(2,1,0), cex = 1.5
+     , col = c("blue", "red", "orange")
+     , xlab = expression(1/r[latt]^2)
+     , ylab = expression(r[latt]^2 ~ F(r[latt], g))
+     , col.band = "lightblue"
+     , col.line = rgb(150/255, 216/255, 230/255)  )
+legend(x = "topleft"
+       , legend = c(paste0("a = ", round(fit.result$t0[1],4))
+                    , paste0("da = ", round(fit.result$se[1],4))))
+grid()
+
 dev.off()
