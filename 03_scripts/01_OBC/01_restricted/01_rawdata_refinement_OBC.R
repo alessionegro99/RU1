@@ -15,11 +15,11 @@ therm <- 1000 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(64) # array of temporal extents to analyse
-SS <- c(8, 16) # array of spatial extents to analyse
-BB <- c(3) # array of inverse couplings to analyse
+SS <- c(7) # array of spatial extents to analyse
+BB <- c(11, 12, 13, 14, 15) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 4  # max length of Wloops
+RMAX <- 8  # max length of Wloops
 
 ## array of distances (simulation dependent)
 

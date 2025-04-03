@@ -8,9 +8,9 @@ output_general <- "/home/negro/projects/matching/RU1/02_output/general/OBC/"
 boot.R <- 200 # number of bootstrap samples (usually 200, 500 or 1000)
 
 ## set simulation parameters
-tt <- 64 # temporal extent
-SS <- c(8, 10, 12) # array of spatial extents to analyse
-BB <- c(3, 3.75, 7.25) # array of inverse couplings to analyse
+tt <- 32 # temporal extent
+SS <- c(3, 4, 5) # array of spatial extents to analyse
+BB <- c(3, 4.25, 11.8) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
 RMAX <- c(4, 5, 6) # max length of Wloops
@@ -18,7 +18,7 @@ RMAX <- c(4, 5, 6) # max length of Wloops
 RRR123 <- list(c(1, sqrt(5), sqrt(8))
                , c(sqrt(2), sqrt(10), sqrt(18))
                , c(sqrt(5), sqrt(25), sqrt(32)))
-
+ 
 RRR <- list() # available distances
 for (ss in seq_along(SS)){
   foo <- c()
@@ -70,7 +70,9 @@ for (ss in seq_along(SS)) {
     
     V[rr] <- tmp$t0[[2]]
     bsV[, rr] <- tmp$t[, 2]
+    
   }
+  print(V)
   rm(tmp)
   
   g1[ss] <- RR[1] * RR[1] * (V[2] - V[1]) / (RR[2] - RR[1])
@@ -94,7 +96,7 @@ for (ss in seq_along(SS)) {
     plotwitherror(bb, g1[ss], dg1[ss],
                   col = cc, pch = pch[1], cex = cex[1],
                   xlab = "beta=1/g²", ylab = "r²F(r,g)",
-                  xlim = c(3, 12), ylim = c(0.04, 0.23), xaxt = "n"
+                  xlim = c(BB[1], BB[3]), ylim = c(0.04, 0.5), xaxt = "n"
     )
     segments(x0 = bb, x1 = bb, y0 = g1[1], y1 = g2[ss], col = cc, lty = "dashed", lwd = 2)
     segments(x0 = bb, x1 = bb, y0 = 0, y1 = g1[ss], col = "lightgray", lty = "dotted", lwd = 2)
@@ -145,15 +147,13 @@ dev.off()
 ## constant fit
 const <- function(par, x, boot.r,...) par[1] + 0*x
 
-## linear fits for g1 and g2
-fn <- function(par, x, boot.r,...) par[1] + par[2]*x
-
 title_str <- ""
 for (ss in SS){
   title_str <- paste0(title_str, "_L", ss)
 }
+
 pdf(paste0(output_general, "CL/CL", title_str, "_b", BB[1], "_fit.pdf"))
-fit.result <- bootstrap.nlsfit(fn = fn, par.guess = c(1,1)
+fit.result <- bootstrap.nlsfit(fn = const, par.guess = c(1)
                                , y = g1, x = 1/(SS^2), bsamples = bsg1)
 summary(fit.result)
 par(xpd=FALSE, mar=c(4.5, 4.5, 4, 3) + 0.1)
@@ -165,28 +165,9 @@ plot(fit.result
      , col.band = "lightblue"
      , col.line = rgb(150/255, 216/255, 230/255)  )
 legend(x = "topleft"
-       , legend = c(paste0("a = ", round(fit.result$t0[1],4))
-                    , paste0("da = ", round(fit.result$se[1],4))
-                    , paste0("b = ", round(fit.result$t0[2],3))
-                    , paste0("db = ", round(fit.result$se[2],4))))
-grid()
-
-fit.result <- bootstrap.nlsfit(fn = fn, par.guess = c(1,1)
-                               , y = g2, x = 1/(SS^2), bsamples = bsg2)
-summary(fit.result)
-par(xpd=FALSE, mar=c(4.5, 4.5, 4, 3) + 0.1)
-plot(fit.result
-     , pch = c(2,1,0), cex = 1.5
-     , col = c("blue", "red", "orange")
-     , xlab = expression(1/r[latt]^2)
-     , ylab = expression(r[latt]^2 ~ F(r[latt], g))
-     , col.band = "lightblue"
-     , col.line = rgb(150/255, 200/255, 215/255)  )
-legend(x = "topleft"
-       , legend = c(paste0("a = ", round(fit.result$t0[1],4))
-                    , paste0("da = ", round(fit.result$se[1],4))
-                    , paste0("b = ", round(fit.result$t0[2],3))
-                    , paste0("db = ", round(fit.result$se[2],4))))
+       , legend = c(paste0("const = ", round(fit.result$t0[1],4))
+                    , paste0("d_const = ", round(fit.result$se[1],4))
+                    , paste0("chi2/dof = ", round(fit.result$chisqr/fit.result$dof,2))))
 grid()
 
 fit.result <- bootstrap.nlsfit(fn = const, par.guess = c(1)
@@ -194,15 +175,15 @@ fit.result <- bootstrap.nlsfit(fn = const, par.guess = c(1)
 summary(fit.result)
 par(xpd=FALSE, mar=c(4.5, 4.5, 4, 3) + 0.1)
 plot(fit.result
-     , pch = c(2,1,0), cex = 1.5
+     , pch = c(6,1,8), cex = 1.5
      , col = c("blue", "red", "orange")
      , xlab = expression(1/r[latt]^2)
      , ylab = expression(r[latt]^2 ~ F(r[latt], g))
      , col.band = "lightblue"
-     , col.line = rgb(150/255, 216/255, 230/255)  )
+     , col.line = rgb(150/255, 200/255, 215/255)  )
 legend(x = "topleft"
-       , legend = c(paste0("a = ", round(fit.result$t0[1],4))
-                    , paste0("da = ", round(fit.result$se[1],4))))
+       , legend = c(paste0("const = ", round(fit.result$t0[1],4))
+                    , paste0("d_const = ", round(fit.result$se[1],4))
+                    , paste0("chi2/dof = ", round(fit.result$chisqr/fit.result$dof,2))))
 grid()
-
 dev.off()
