@@ -9,17 +9,20 @@ rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/OBC/"
 output <- "/home/negro/projects/matching/RU1/02_output/restricted/OBC/"
 
 ## set refinement parameters
-boot.l <- 200 # block size
+boot.l <- 500 # block size
 boot.R <- 200 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 1000 # number of configuration to discard for thermalization
+therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(64) # array of temporal extents to analyse
 SS <- c(7) # array of spatial extents to analyse
-BB <- c(11, 12, 13, 14, 15) # array of inverse couplings to analyse
+BB <- c(12, 13, 14, 15, 16, 17, 18) # array of inverse couplings to analyse
 R0 <- 0 # starting point (OBC related)
 
-RMAX <- 8  # max length of Wloops
+TMAX <- 32 # max T of Wloops 
+RMAX <- 9 # max R of Wloops
+
+non_planar <- TRUE
 
 ## array of distances (simulation dependent)
 
@@ -27,19 +30,20 @@ for (temporal_extent in TT) {
   for (spatial_extent in SS) {
     for (inv_coupling in BB) {
       r_i <- list()
-      for (i in seq(1, spatial_extent - 1)) {
-        for (j in seq(0, i)) {
-          if ((sqrt(i^2 + j^2)) < RMAX) {
-            r_i[[length(r_i) + 1]] <- sqrt(i^2 + j^2)
+      
+      if(non_planar){
+       for (i in seq(1, spatial_extent - 1)) {
+         for (j in seq(0, i)) {
+           if ((sqrt(i^2 + j^2)) < RMAX) {
+              r_i[[length(r_i) + 1]] <- sqrt(i^2 + j^2)
+           }
           }
         }
+      } else {
+        r_i <- seq(1, RMAX - 1)
       }
-
       #######################################
       folder <- paste0("pascal_OBC_", inv_coupling, "_", spatial_extent, "_", temporal_extent, "_", R0)
-      if (!dir.exists(paste0(output, folder))) {
-        dir.create(paste0(output, folder))
-      }
       if (!dir.exists(paste0(output, folder))) {
         dir.create(paste0(output, folder))
       }
@@ -50,7 +54,7 @@ for (temporal_extent in TT) {
       ))
 
       ## skipping the header
-      data <- as.matrix(read.table(paste0(rawdata, folder,".dat"), skip = 20))
+      data <- as.matrix(read.table(paste0(rawdata, folder,".dat"), skip = 22))
       #######################################
 
       message("thermalization...")
@@ -141,7 +145,7 @@ for (temporal_extent in TT) {
 
       mask <- rep(list(seq(6, 16)), length(r_i))
 
-      range <- seq(1, temporal_extent - 1)
+      range <- seq(1, TMAX - 1)
 
       pdf(paste0(output, folder, "/uncorrelated_fit.pdf"))
       for (i in seq_along(r_i)) {
