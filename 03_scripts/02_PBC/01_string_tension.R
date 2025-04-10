@@ -7,33 +7,49 @@ rawdata <- "/home/negro/projects/matching/RU1/01_rawdata/PBC/"
 output <- "/home/negro/projects/matching/RU1/02_output/restricted/PBC/"
 
 ## set refinement parameters
-boot.l <- 200 # block size
-boot.R <- 200 # number of bootstrap samples (usually 200, 500 or 1000)
-therm <- 100 # number of configuration to discard for thermalization
+boot.l <- 500 # block size
+boot.R <- 500 # number of bootstrap samples (usually 200, 500 or 1000)
+therm <- 500 # number of configuration to discard for thermalization
 
 ## set simulation parameters
 TT <- c(42) # array of temporal extents to analyse
 SS <- c(42) # array of spatial extents to analyse
-BB <- c(1.7) # array of inverse couplings to analyse
+BB <- c(1.4) # array of inverse couplings to analyse
 RR <- seq(0,7) # number of replicas
 
-TMAX <- 11 # max T of Wloops 
-RMAX <- 11 # max R of Wloops
+WT <- 10 # max T of Wloops 
+WS <- 10 # max R of Wloops
 
 non_planar <- FALSE
 
-seq_max <- 7 # max plotting in wt
+seq_max <- 3 # max plotting in wt
 
 # some functions
 
 V_wt_ansatz <- function(par, x, boot.r, ...) par[1] + par[2]*x
-V_Cornell <- function(par, x, boot.r, ...) par[1]*x + par[2]/x + par[3]
+V_Cornell <- function(par, x, boot.r, ...) par[1]*x + par[2]*1/x + par[3]
+
+random_pastel_color <- function() {
+  # Generate RGB values closer to white (pastel)
+  r <- runif(1, min = 0.6, max = 1)
+  g <- runif(1, min = 0.6, max = 1)
+  b <- runif(1, min = 0.6, max = 1)
+  
+  # Convert to hex
+  rgb(r, g, b, maxColorValue = 1)
+}
 
 ## array of distances (simulation dependent)
 
 for (tt in TT) {
   for (ss in SS) {
     for (bb in BB) {
+      random_pastel_colors <- c()
+      
+      for(c in seq(1:max(WT, WS))){
+        random_pastel_colors <- c(random_pastel_colors, random_pastel_color())
+      }
+      
       data <- NULL
       
       for(rr in RR){
@@ -47,7 +63,7 @@ for (tt in TT) {
         dir.create(paste0(output, folder))
       }
       
-      r_i <- seq(1, RMAX - 1, 1)
+      r_i <- seq(1, WS, 1)
       
       message(sprintf(
         "Analyzing data for:\n- Temporal extent: %s\n- Spatial extent: %s\n- Inverse coupling: %s",
@@ -90,7 +106,7 @@ for (tt in TT) {
       ## bootstrapping for every time
       W <- list()
       
-      for (i in seq(1, RMAX - 1)) {
+      for (i in seq(1, WS)) {
         tmp <- data[, seq(4 + 1 + (i-1)*length(r_i), 4 + i*length(r_i))]
         Time <- ncol(tmp)
         
@@ -100,40 +116,33 @@ for (tt in TT) {
         W[[length(W) + 1]] <- bootstrap.cf(cf = tmp, boot.R = boot.R, boot.l = boot.l, sim = "fixed", endcorr = TRUE, seed = 1234567)
       }
       
+      # plotting V vs wr for every wt ##########################################
+      
       V_wt <- list()
       bs_V_wt <- list()
       
       for(wt in seq(1:seq_max)){
-        V_wt[[wt]] <- -1/wt*log(W[[wt]]$cf0[seq(1,TMAX - 1)])
-        bs_V_wt[[wt]] <- -1/wt*log(W[[wt]]$cf.tsboot$t[, seq(1,TMAX - 1)])
+        V_wt[[wt]] <- -1/wt*log(W[[wt]]$cf0)
+        bs_V_wt[[wt]] <- -1/wt*log(W[[wt]]$cf.tsboot$t)
       }
-      
-      pastel_colors <- c(
-        "#AEC6CF",  # pastel blue
-        "#FFB347",  # pastel orange
-        "#77DD77",  # pastel green
-        "#FF6961",  # pastel red
-        "#CBAACB",  # pastel purple
-        "#FFD1DC",  # pastel pink
-        "#FDFD96",  # pastel yellow
-        "#B39EB5",  # pastel lavender
-        "#CFCFC4"   # pastel gray
-      )
-      
+    
       legend <- c()
       
       pdf(paste0(output, folder, "/W_wt(wr).pdf"))
-      plotwitherror(seq(1, TMAX - 1), V_wt[[1]], apply(bs_V_wt[[1]], 2, sd, na.rm = TRUE), col = pastel_colors[1], pch=1, xlab ="wr", ylab ="V(wr)")
+      plotwitherror(seq(1,WS), V_wt[[1]], apply(bs_V_wt[[1]], 2, sd, na.rm = TRUE), col = random_pastel_colors[1], pch=1, xlab ="wr", ylab ="V(wr)", xlim = c(0,10), ylim = c(0,max(V_wt[[1]])))
       legend <- c(legend, paste0("wt = ", 1))
       
-      for(cc in seq_along(pastel_colors[2:seq_max])){
-        plotwitherror(seq(1, TMAX - 1), V_wt[[cc + 1]], apply(bs_V_wt[[cc + 1]], 2, sd, na.rm = TRUE), col = pastel_colors[cc], rep = TRUE, pch=1)
-        legend <- c(legend, paste0("wt = ", cc + 1))
+      for(i in seq(2,seq_max)){
+        plotwitherror(seq(1,WS), V_wt[[i]], apply(bs_V_wt[[i]], 2, sd, na.rm = TRUE), col = random_pastel_colors[i], rep = TRUE, pch=1)
+        legend <- c(legend, paste0("wt = ", i))
       }
       grid()
-      legend("topleft", legend = legend, col = pastel_colors[1:length(legend)], pch=1)
+      legend("topleft", legend = legend, col = random_pastel_colors[1:length(legend)], pch=1)
       dev.off()
       
+      ##########################################################################
+      
+      # plotting V vs wt for every wr ##########################################
       
       V_wr <- list()
       bs_V_wr <- list()
@@ -149,55 +158,56 @@ for (tt in TT) {
         bs_V_wr[[i]] <- bs_tmp
       }
       
-      pastel_colors <- c(
-        "#AEC6CF",  # pastel blue
-        "#FFB347",  # pastel orange
-        "#77DD77",  # pastel green
-        "#FF6961",  # pastel red
-        "#CBAACB",  # pastel purple
-        "#FFD1DC",  # pastel pink
-        "#FDFD96",  # pastel yellow
-        "#B39EB5",  # pastel lavender
-        "#E0BBE4",  # soft lilac
-        "#CFCFC4"   # pastel gray
-      )
+      mask <- rep(list(seq(1, seq_max)), WS)
       
       legend <- c()
       
       pdf(paste0(output, folder, "/W_wr(wt).pdf"))
-      plotwitherror(1/seq(1, seq_max), V_wr[[1]],apply(matrix(unlist(bs_V_wr[[1]]), nrow = boot.R, ncol = seq_max), 2, sd), col = pastel_colors[1], pch=1, xlab = "1/wt", ylab = "V(wt)", ylim = c(min(unlist(V_wr)),max(unlist(V_wr))), xlim = c(0, 1))
+      plotwitherror(1/seq(1, seq_max), V_wr[[1]],apply(matrix(unlist(bs_V_wr[[1]]), nrow = boot.R, ncol = seq_max), 2, sd), col = random_pastel_colors[1], pch=1, xlab = "1/wt", ylab = "V(wt)", ylim = c(min(unlist(V_wr)),max(unlist(V_wr))), xlim = c(0, 1))
       legend <- c(legend, paste0("wr = ", 1))
       
-      for(cc in seq_along(pastel_colors[2:length(pastel_colors)])){
-        plotwitherror(1/seq(1, seq_max), V_wr[[cc + 1]],apply(matrix(unlist(bs_V_wr[[cc + 1]]), nrow = boot.R, ncol = seq_max), 2, sd), col = pastel_colors[cc], pch=1, rep = TRUE)
-        legend <- c(legend, paste0("wr = ", cc + 1))
+      for(i in seq(2,WS-1)){
+        plotwitherror(1/seq(1, seq_max), V_wr[[i]], apply(matrix(unlist(bs_V_wr[[i]]), nrow = boot.R, ncol = seq_max), 2, sd), col = random_pastel_colors[i], pch=1, rep = TRUE)
+        legend <- c(legend, paste0("wr = ", i))
       }
       grid()
-      legend("topleft", legend = legend, col = pastel_colors[1:length(legend)], pch=1)
+      legend("topleft", legend = legend, col = random_pastel_colors[1:length(legend)], pch=1)
 
-      fit.result <- bootstrap.nlsfit(fn = V_wt_ansatz, par.guess = c(1,1), x = 1/seq(1, seq_max), y = V_wr[[1]], bsamples = matrix(unlist(bs_V_wr[[1]]), nrow = boot.R, ncol = seq_max), mask = seq(4,7))
+      fit.result <- bootstrap.nlsfit(fn = V_wt_ansatz, par.guess = c(1,1), x = 1/seq(1, seq_max), y = V_wr[[1]], bsamples = matrix(unlist(bs_V_wr[[1]]), nrow = boot.R, ncol = seq_max), mask = mask[[1]])
       
       cat(c(fit.result$t0, fit.result$se, fit.result$chisqr/fit.result$dof), file = paste0(output, folder, "/fit.csv"), fill = TRUE, append = FALSE)        
-      cat(fit.result$t[,1], file = paste0(output, folder, "/fit_boot.csv"), append = FALSE, fill = TRUE)
-      cat(fit.result$t[,2], file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = TRUE)        
+      cat(c(fit.result$t[,1],"\n"), file = paste0(output, folder, "/fit_boot.csv"), append = FALSE, fill = FALSE)
+      cat(c(fit.result$t[,2],"\n"), file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = FALSE)        
       
+      plot(fit.result, col = random_pastel_colors[1], pch=1, xlab = "1/wt", ylab = "V(wt)", ylim = c(min(unlist(V_wr)),max(unlist(V_wr))), xlim = c(0, 1), col.line=random_pastel_colors[1], col.band=random_pastel_colors[1], plot.range = c(0,1))
       
-      plot(fit.result, col = pastel_colors[1], pch=1, xlab = "1/wt", ylab = "V(wt)", ylim = c(min(unlist(V_wr)),max(unlist(V_wr))), xlim = c(0, 1), col.line=pastel_colors[1], col.band=pastel_colors[1], plot.range = c(0,1))
-      
-      for(cc in seq_along(pastel_colors[2:length(pastel_colors)])){
-        fit.result <- bootstrap.nlsfit(fn = V_wt_ansatz, par.guess = c(1,1), x = 1/seq(1, seq_max), y = V_wr[[cc+1]], bsamples = matrix(unlist(bs_V_wr[[cc+1]]), nrow = boot.R, ncol = seq_max), mask = seq(4,7))
-        plot(fit.result, col = pastel_colors[cc], pch=1, rep = TRUE, col.line = pastel_colors[cc], col.band=pastel_colors[cc], plot.range=c(0,1))
+      for(i in seq(2,WS-1)){
+        fit.result <- bootstrap.nlsfit(fn = V_wt_ansatz, par.guess = c(1,1), x = 1/seq(1, seq_max), y = V_wr[[i]], bsamples = matrix(unlist(bs_V_wr[[i]]), nrow = boot.R, ncol = seq_max), mask = mask[[i]])
+        plot(fit.result, col = random_pastel_colors[i], pch=1, rep = TRUE, col.line = random_pastel_colors[i], col.band=random_pastel_colors[i], plot.range=c(0,1))
         
         cat(c(fit.result$t0, fit.result$se, fit.result$chisqr/fit.result$dof), file = paste0(output, folder, "/fit.csv"), append = TRUE, fill = TRUE)        
-        cat(fit.result$t[,1], file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = TRUE)
-        cat(fit.result$t[,2], file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = TRUE)                
+        cat(c(fit.result$t[,1],"\n"), file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = FALSE)
+        cat(c(fit.result$t[,2],"\n"), file = paste0(output, folder, "/fit_boot.csv"), append = TRUE, fill = FALSE)                
       }
       dev.off()
       
-      x <- seq(1, RMAX - 1)
+      ##########################################################################
+      
+      x <- seq(1, WS-1)
       data <- as.matrix(read.table(paste0(output, folder, "/fit.csv"), header = FALSE, sep = " "))
-      bs_data <- as.matrix(read.table(paste0(output, folder, "/fit_boot.csv"), header = FALSE, sep = " "))
-      y <- 
+      bs_data <- t(as.matrix(read.table(paste0(output, folder, "/fit_boot.csv"))))
+      
+      y <- data[,1]
+      bs_y <- bs_data[,seq(1,ncol(bs_data),2)]
+      
+      fit.result_Cornell <- bootstrap.nlsfit(fn = V_Cornell, par.guess = c(0.1,1,1), x = x, y = y, bsamples = bs_y, mask = seq(3,9))
+      
+      pdf(paste0(output, folder, "/V_Cornell.pdf"))
+      plot(fit.result_Cornell, col = random_pastel_colors[1], pch=1, col.line = random_pastel_colors[1], col.band=random_pastel_colors[1], plot.range=c(1,WS), xlab = "wr", ylab = "V_wr(wt=inf)")
+      grid()
+      legend("topleft", legend = c(paste0("sigma = ", round(fit.result_Cornell$t0[1],4)), paste0("d_sigma = ", round(fit.result_Cornell$se[1],4)), paste0("chi2/dof = ", round(fit.result_Cornell$chisqr/fit.result_Cornell$dof,2))))
+      dev.off()
     }
   }
 }
+
