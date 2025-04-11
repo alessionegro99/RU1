@@ -6,10 +6,9 @@ V_wt_ansatz <- function(par, x, boot.r, ...) par[1] + par[2]*x
 V_Cornell <- function(par, x, boot.r, ...) par[1]*x + par[2]*1/x + par[3]
 
 random_pastel_color <- function() {
-  # Generate RGB values closer to white (pastel)
-  r <- runif(1, min = 0, max = 0.6)
-  g <- runif(1, min = 0, max = 0.6)
-  b <- runif(1, min = 0, max = 0.6)
+  r <- runif(1, min = 0.5, max = 1)
+  g <- runif(1, min = 0.5, max = 1)
+  b <- runif(1, min = 0.5, max = 1)
   
   # Convert to hex
   rgb(r, g, b, maxColorValue = 1)
